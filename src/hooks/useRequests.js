@@ -1,0 +1,152 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../lib/supabaseClient';
+import {
+  fetchClientRequests,
+  fetchMechanicRequests,
+  fetchAvailableRequests,
+} from '../services/requestService';
+
+/** Client's own requests, kept live via realtime INSERT/UPDATE on service_requests. */
+export function useClientRequests(clientId) {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const reload = useCallback(async () => {
+    if (!clientId) return;
+    try {
+      setLoading(true);
+      const data = await fetchClientRequests(clientId);
+      setRequests(data);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [clientId]);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  useEffect(() => {
+    if (!clientId) return undefined;
+    const channel = supabase
+      .channel(`client-requests-${clientId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'service_requests', filter: `client_id=eq.${clientId}` },
+        (payload) => {
+          setRequests((prev) => {
+            if (payload.eventType === 'INSERT') return [payload.new, ...prev];
+            if (payload.eventType === 'UPDATE')
+              return prev.map((r) => (r.id === payload.new.id ? payload.new : r));
+            if (payload.eventType === 'DELETE') return prev.filter((r) => r.id !== payload.old.id);
+            return prev;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [clientId]);
+
+  return { requests, loading, error, reload };
+}
+
+/** PENDING requests any online mechanic can see + pick up, live via realtime. */
+export function useAvailableRequests() {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const reload = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await fetchAvailableRequests();
+      setRequests(data);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('available-requests-board')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'service_requests' }, (payload) => {
+        setRequests((prev) => {
+          const newRow = payload.new;
+          const oldRow = payload.old;
+          if (payload.eventType === 'INSERT' && newRow.status === 'PENDING') return [...prev, newRow];
+          if (payload.eventType === 'UPDATE') {
+            // No longer pending (someone accepted it, or it was cancelled) -> drop from the board.
+            if (newRow.status !== 'PENDING') return prev.filter((r) => r.id !== newRow.id);
+            return prev.map((r) => (r.id === newRow.id ? newRow : r));
+          }
+          if (payload.eventType === 'DELETE') return prev.filter((r) => r.id !== oldRow.id);
+          return prev;
+        });
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, []);
+
+  return { requests, loading, error, reload };
+}
+
+/** A mechanic's assigned requests (active + history), live via realtime. */
+export function useMechanicRequests(mechanicId) {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const reload = useCallback(async () => {
+    if (!mechanicId) return;
+    try {
+      setLoading(true);
+      const data = await fetchMechanicRequests(mechanicId);
+      setRequests(data);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [mechanicId]);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  useEffect(() => {
+    if (!mechanicId) return undefined;
+    const channel = supabase
+      .channel(`mechanic-requests-${mechanicId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'service_requests', filter: `mechanic_id=eq.${mechanicId}` },
+        (payload) => {
+          setRequests((prev) => {
+            if (payload.eventType === 'INSERT') return [payload.new, ...prev];
+            if (payload.eventType === 'UPDATE')
+              return prev.map((r) => (r.id === payload.new.id ? payload.new : r));
+            return prev;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [mechanicId]);
+
+  return { requests, loading, error, reload };
+}
