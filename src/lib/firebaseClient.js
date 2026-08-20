@@ -40,25 +40,36 @@ export function formatPakistaniPhoneNumber(input) {
 export function setupRecaptcha(containerId = 'recaptcha-container') {
   if (typeof window === 'undefined') return null;
 
-  if (window.recaptchaVerifier) {
-    try {
-      window.recaptchaVerifier.clear();
-    } catch (e) {
-      console.warn('reCAPTCHA reset:', e);
+  try {
+    if (window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier.clear();
+      } catch (e) {
+        // ignore clear error
+      }
+      window.recaptchaVerifier = null;
     }
+
+    const container = document.getElementById(containerId);
+    if (!container) {
+      console.warn(`reCAPTCHA container element #${containerId} not found.`);
+    }
+
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+      size: 'invisible',
+      callback: () => {
+        // reCAPTCHA solved
+      },
+      'expired-callback': () => {
+        console.warn('reCAPTCHA expired. Please retry.');
+      }
+    });
+
+    return window.recaptchaVerifier;
+  } catch (err) {
+    console.error('Error creating RecaptchaVerifier:', err);
+    throw err;
   }
-
-  window.recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
-    size: 'invisible',
-    callback: () => {
-      // reCAPTCHA solved
-    },
-    'expired-callback': () => {
-      console.warn('reCAPTCHA expired. Please retry.');
-    }
-  });
-
-  return window.recaptchaVerifier;
 }
 
 /**
@@ -72,9 +83,20 @@ export async function sendRealSMSOTP(rawPhoneNumber, containerId = 'recaptcha-co
   }
 
   const verifier = setupRecaptcha(containerId);
-  const confirmationResult = await signInWithPhoneNumber(auth, formattedNumber, verifier);
-  window.confirmationResult = confirmationResult;
-  return { confirmationResult, formattedNumber };
+  try {
+    const confirmationResult = await signInWithPhoneNumber(auth, formattedNumber, verifier);
+    window.confirmationResult = confirmationResult;
+    return { confirmationResult, formattedNumber };
+  } catch (err) {
+    console.error('Firebase signInWithPhoneNumber failed:', err);
+    if (window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier.clear();
+      } catch (e) {}
+      window.recaptchaVerifier = null;
+    }
+    throw err;
+  }
 }
 
 /**
