@@ -425,7 +425,16 @@ const translations = {
     "quick_msg_1": "📍 I am waiting by the roadside with hazard lights on.",
     "quick_msg_2": "⏳ What is your estimated time of arrival (ETA)?",
     "quick_msg_3": "🔑 I have my car keys and documents ready.",
-    "quick_msg_4": "⛽ I am parked near the main fuel station."
+    "quick_msg_4": "⛽ I am parked near the main fuel station.",
+    
+    // Mechanic Dispatch Console
+    "incoming_requests": "Incoming Requests",
+    "job_history": "Job History",
+    "offline_title": "You are currently Offline",
+    "offline_sub": "Go online to start receiving nearby emergency breakdown requests.",
+    "no_active_requests_title": "No active requests right now.",
+    "no_active_requests_sub": "New requests will appear here automatically.",
+    "no_completed_jobs": "No completed jobs yet."
   },
   ur: {
     brand_logo: "آٹو ریسکیو",
@@ -849,7 +858,16 @@ const translations = {
     "quick_msg_1": "📍 میں سڑک کے کنارے ایمرجنسی لائٹس جلا کر کھڑا ہوں۔",
     "quick_msg_2": "⏳ آپ کو پہنچنے میں کتنا وقت لگے گا؟",
     "quick_msg_3": "🔑 میرے پاس گاڑی کی چابیاں اور کاغذات تیار ہیں۔",
-    "quick_msg_4": "⛽ میں مین پیٹرول پمپ کے قریب کھڑا ہوں۔"
+    "quick_msg_4": "⛽ میں مین پیٹرول پمپ کے قریب کھڑا ہوں۔",
+
+    // Mechanic Dispatch Console
+    "incoming_requests": "موصول شدہ درخواستیں",
+    "job_history": "جاب ہسٹری",
+    "offline_title": "آپ اس وقت آف لائن ہیں",
+    "offline_sub": "سڑک کنارے نئی نوکریاں موصول کرنے کے لیے آن لائن ہو جائیں۔",
+    "no_active_requests_title": "اس وقت کوئی نئی درخواست نہیں ہے۔",
+    "no_active_requests_sub": "نئی درخواستیں یہاں خود بخود ظاہر ہوں گی۔",
+    "no_completed_jobs": "ابھی تک کوئی کام مکمل نہیں ہوا۔"
   }
 };
 
@@ -869,7 +887,17 @@ export const LanguageProvider = ({ children }) => {
   };
 
   const t = (key) => {
-    return translations[language][key] || translations['en'][key] || key;
+    if (!key) return '';
+    if (translations[language] && translations[language][key]) return translations[language][key];
+    if (translations['en'] && translations['en'][key]) return translations['en'][key];
+    // Automatically convert any unmapped snake_case keys (e.g. incoming_requests) into readable Title Case (e.g. Incoming Requests)
+    if (typeof key === 'string' && key.includes('_')) {
+      return key
+        .split('_')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+    }
+    return key;
   };
 
   return (
