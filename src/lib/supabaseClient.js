@@ -79,9 +79,22 @@ class MockQueryBuilder {
       let data = [...db];
       this._filters.forEach(f => {
         if (f.op === 'eq') {
-          data = data.filter(row => row[f.col] === f.val);
+          data = data.filter(row => {
+            if (row[f.col] === f.val) return true;
+            if (typeof row[f.col] === 'string' && typeof f.val === 'string') {
+              return row[f.col].toUpperCase() === f.val.toUpperCase();
+            }
+            if (f.col === 'status' && (f.val === 'PENDING' || f.val === 'pending')) {
+              return !row.status || String(row.status).toUpperCase() === 'PENDING';
+            }
+            return false;
+          });
         } else if (f.op === 'in') {
-          data = data.filter(row => f.vals.includes(row[f.col]));
+          const upperVals = f.vals.map(v => typeof v === 'string' ? v.toUpperCase() : v);
+          data = data.filter(row => {
+            const val = typeof row[f.col] === 'string' ? row[f.col].toUpperCase() : row[f.col];
+            return upperVals.includes(val);
+          });
         } else if (f.op === 'is') {
           data = data.filter(row => row[f.col] === f.val);
         }

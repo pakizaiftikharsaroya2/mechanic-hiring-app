@@ -48,9 +48,9 @@ export async function fetchAvailableRequests() {
     .from('service_requests')
     .select('*')
     .eq('status', 'PENDING')
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: false });
   if (error) throw error;
-  return data;
+  return (data || []).filter(r => !r.status || String(r.status).toUpperCase() === 'PENDING');
 }
 
 /** Requests currently assigned to the logged-in mechanic (active + history). */
