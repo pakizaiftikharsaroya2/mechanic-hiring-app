@@ -11,7 +11,7 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sending, setSending] = useState(false);
-  const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
   const loadMessages = useCallback(async () => {
     try {
@@ -32,7 +32,7 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
       if (!e.key || e.key.includes('messages')) loadMessages();
     };
     window.addEventListener('storage', handleStorage);
-    const interval = setInterval(loadMessages, 1500);
+    const interval = setInterval(loadMessages, 2500);
     return () => {
       window.removeEventListener('storage', handleStorage);
       clearInterval(interval);
@@ -47,9 +47,12 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
     return unsubscribe;
   }, [requestId]);
 
+  // Scroll ONLY the internal chat container when new messages arrive without hijacking the page scroll
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (messages.length > 0 && chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages.length]);
 
   const handleSend = async (e, textOverride) => {
     if (e) e.preventDefault();
@@ -82,7 +85,7 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ID: {requestId.slice(-5)}</span>
       </div>
 
-      <div className="chat-messages" style={{ flexGrow: 1, overflowY: 'auto', background: 'var(--bg-card)' }}>
+      <div ref={chatContainerRef} className="chat-messages" style={{ flexGrow: 1, overflowY: 'auto', background: 'var(--bg-card)' }}>
         {loading && (
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', padding: '1.5rem' }}>
             {t('loading_messages')}
@@ -193,7 +196,6 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
               </div>
             );
           })}
-        <div ref={messagesEndRef} />
       </div>
 
       <form onSubmit={handleSend} className="chat-input-area" style={{ padding: '0.5rem', background: '#f8f9fa' }}>
