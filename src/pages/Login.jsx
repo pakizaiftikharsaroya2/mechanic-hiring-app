@@ -19,6 +19,7 @@ export default function Login() {
   const [otpCode, setOtpCode] = useState('');
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [fallbackSimulatedOtp, setFallbackSimulatedOtp] = useState('');
+  const [activeSmsNotification, setActiveSmsNotification] = useState(null);
 
   // Standard Credentials States (Mechanic)
   const [email, setEmail] = useState('');
@@ -58,8 +59,6 @@ export default function Login() {
       setSubmitting(false);
     }
   };
-
-  const [activeSmsNotification, setActiveSmsNotification] = useState(null);
 
   // Send Real SMS OTP to mobile phone
   const handleSendOtp = async () => {

@@ -32,6 +32,7 @@ export default function Register() {
   const [otpCode, setOtpCode] = useState('');
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [fallbackSimulatedOtp, setFallbackSimulatedOtp] = useState('');
+  const [activeSmsNotification, setActiveSmsNotification] = useState(null);
 
   // Live Webcam States (Mechanic Only)
   const [cameraActiveField, setCameraActiveField] = useState(null); // 'cnicFront' | 'cnicBack' | 'selfie' | null
