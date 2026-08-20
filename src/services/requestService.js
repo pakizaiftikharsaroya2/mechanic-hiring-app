@@ -47,10 +47,12 @@ export async function fetchAvailableRequests() {
   const { data, error } = await supabase
     .from('service_requests')
     .select('*')
-    .eq('status', 'PENDING')
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return (data || []).filter(r => !r.status || String(r.status).toUpperCase() === 'PENDING');
+  return (data || []).filter(r => {
+    const s = String(r.status || 'PENDING').toUpperCase();
+    return s === 'PENDING' && !r.mechanic_id;
+  });
 }
 
 /** Requests currently assigned to the logged-in mechanic (active + history). */
