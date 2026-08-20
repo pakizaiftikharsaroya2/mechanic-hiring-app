@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { fetchProfile, loginUser, logoutUser, registerUser } from '../services/authService';
+import { fetchProfile, loginUser, logoutUser, registerUser, loginWithGoogle, loginWithPhone } from '../services/authService';
 
 const AuthContext = createContext();
 
@@ -77,8 +77,60 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     await logoutUser();
     setProfile(null);
-    addToast('Logged out', 'info');
+    addToast('Logged out successfully', 'info');
+    window.location.href = '/';
   };
+
+  const loginGoogle = async () => {
+    await loginWithGoogle();
+    addToast('Successfully signed in with Google!', 'success');
+  };
+
+  const loginPhone = async (phone) => {
+    await loginWithPhone(phone);
+    addToast('Phone number verified! Welcome to AutoRescue.', 'success');
+  };
+
+  const updateLocalProfile = useCallback(async (updates) => {
+    if (!session?.user?.id) return;
+    try {
+      // 1. Update mock profiles db
+      const profiles = JSON.parse(localStorage.getItem('mock_profiles') || '[]');
+      const updated = profiles.map(p => p.id === session.user.id ? { ...p, name: updates.name, phone: updates.phone, email: updates.email } : p);
+      localStorage.setItem('mock_profiles', JSON.stringify(updated));
+
+      // 2. Update mock users db
+      const users = JSON.parse(localStorage.getItem('mock_users') || '[]');
+      const updatedUsers = users.map(u => {
+        if (u.id === session.user.id) {
+          const updatedUser = { 
+            ...u, 
+            email: updates.email,
+            user_metadata: { ...u.user_metadata, name: updates.name, phone: updates.phone } 
+          };
+          if (updates.password) {
+            updatedUser.password = updates.password;
+          }
+          return updatedUser;
+        }
+        return u;
+      });
+      localStorage.setItem('mock_users', JSON.stringify(updatedUsers));
+
+      // 3. Update active session metadata
+      const mockSession = JSON.parse(localStorage.getItem('mock_session') || '{}');
+      if (mockSession?.user?.id === session.user.id) {
+        mockSession.user.email = updates.email;
+        mockSession.user.user_metadata = { ...mockSession.user.user_metadata, name: updates.name, phone: updates.phone };
+        localStorage.setItem('mock_session', JSON.stringify(mockSession));
+      }
+
+      await loadProfile(session.user.id);
+      addToast('Profile & security settings updated successfully!', 'success');
+    } catch (err) {
+      addToast('Failed to update account details', 'error');
+    }
+  }, [session, loadProfile, addToast]);
 
   return (
     <AuthContext.Provider
@@ -92,10 +144,13 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
+        loginGoogle,
+        loginPhone,
         theme,
         toggleTheme,
         toasts,
         addToast,
+        updateLocalProfile
       }}
     >
       {children}

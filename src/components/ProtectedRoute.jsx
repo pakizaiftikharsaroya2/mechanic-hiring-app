@@ -14,7 +14,7 @@ export default function ProtectedRoute({ children, allowedRole }) {
     return <div style={{ textAlign: 'center', padding: '4rem' }}>Loading...</div>;
   }
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
   if (allowedRole && role !== allowedRole) {
     return <Navigate to="/" replace />;

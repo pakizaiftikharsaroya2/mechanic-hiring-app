@@ -47,7 +47,7 @@ export default function RealMap({ clientPosition, mechanicPosition, status }) {
   const [routeCoords, setRouteCoords] = useState(null);
 
   const showMechanic = !!mechanicPosition && status !== 'PENDING';
-  const showRoute = showMechanic && status !== 'COMPLETED' && status !== 'CANCELLED';
+  const showRoute = showMechanic && status === 'EN_ROUTE';
 
   useEffect(() => {
     let cancelled = false;

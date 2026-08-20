@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { fetchMessages, sendMessage as sendMessageApi, subscribeToMessages } from '../services/chatService';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
   const { addToast } = useAuth();
+  const { t } = useLanguage();
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -62,19 +64,19 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
     new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className="glass-panel chat-window" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: '380px', background: '#ffffff', borderColor: 'var(--border-color)' }}>
+    <div className="glass-panel chat-window" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: '380px', background: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
       <div className="chat-header" style={{ background: '#f8f9fa' }}>
         <h4 style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           <span style={{ width: '6px', height: '6px', background: 'var(--success)', borderRadius: '50%' }}></span>
-          {otherPartyName ? `Chat with ${otherPartyName}` : 'Coordination Desk'}
+          {otherPartyName ? t('chat_with').replace('{name}', otherPartyName) : t('coordination_desk')}
         </h4>
         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ID: {requestId.slice(-5)}</span>
       </div>
 
-      <div className="chat-messages" style={{ flexGrow: 1, overflowY: 'auto', background: '#ffffff' }}>
+      <div className="chat-messages" style={{ flexGrow: 1, overflowY: 'auto', background: 'var(--bg-card)' }}>
         {loading && (
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', padding: '1.5rem' }}>
-            Loading messages...
+            {t('loading_messages')}
           </div>
         )}
 
@@ -86,7 +88,7 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
 
         {!loading && !error && messages.length === 0 && (
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', padding: '1.5rem' }}>
-            No messages yet. Say hello!
+            {t('no_messages_yet')}
           </div>
         )}
 
@@ -134,12 +136,12 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
           className="form-control"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="Message..."
+          placeholder={t('message_placeholder')}
           disabled={sending}
           style={{ flexGrow: 1, padding: '0.4rem 0.6rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #ced4da' }}
         />
         <button type="submit" className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', borderRadius: '4px', fontSize: '0.75rem' }} disabled={sending}>
-          {sending ? '...' : 'Send'}
+          {sending ? '...' : t('send_btn')}
         </button>
       </form>
     </div>

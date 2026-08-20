@@ -238,6 +238,24 @@ h1, h2, h3, h4, h5 {
   opacity: 0.6;
 }
 
+/* Ensure select dropdowns respect theme colors */
+.form-control select,
+select.form-control {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.2rem;
+  cursor: pointer;
+}
+
+select.form-control option,
+.form-control option {
+  background: var(--bg-card);
+  color: var(--text-main);
+}
+
 select.form-control { cursor: pointer; }
 textarea.form-control { resize: vertical; min-height: 80px; }
 
@@ -882,4 +900,455 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 @media (max-width: 768px) {
   .section-heading { font-size: 1.5rem; }
   .stat-number { font-size: 1.8rem; }
+}
+
+/* =====================================================
+   Premium Navigation Bar & Interactive Styles
+   ===================================================== */
+
+/* =====================================================
+   BMW / Mercedes Modern Floating Glass Navigation
+   ===================================================== */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 3rem;
+  background: rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="dark"] .app-header {
+  background: rgba(4, 30, 28, 0.82);
+  border-bottom: 1px solid rgba(45, 212, 191, 0.12);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Floating Glass Overlay for Landing Hero */
+.app-header-transparent {
+  background: rgba(4, 30, 28, 0.45) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  padding: 1rem 3.5rem !important;
+}
+
+/* Luxury Automotive Brand Typography */
+.app-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: transform 0.25s ease;
+}
+
+.brand-icon-wrapper {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(15, 118, 110, 0.35);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.app-brand:hover .brand-icon-wrapper {
+  transform: translateY(-1px) scale(1.05);
+  box-shadow: 0 4px 14px rgba(15, 118, 110, 0.45);
+}
+
+.brand-text {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-main);
+  text-transform: uppercase;
+}
+
+.brand-accent {
+  color: var(--primary);
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  margin-left: 0.05rem;
+}
+
+.app-header-transparent .brand-text {
+  color: #ffffff !important;
+}
+
+.app-header-transparent .brand-accent {
+  color: var(--primary-light) !important;
+}
+
+/* Nav Links: Tracked Minimalist Uppercase */
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+}
+
+.nav-link-premium {
+  font-family: var(--font-display);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  text-decoration: none;
+  position: relative;
+  padding: 0.4rem 0.1rem;
+  transition: color 0.25s ease;
+}
+
+.nav-link-premium::after {
+  content: '';
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--primary);
+  border-radius: 2px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateX(-50%);
+}
+
+.nav-link-premium:hover {
+  color: var(--primary) !important;
+}
+
+.nav-link-premium:hover::after {
+  width: 100%;
+}
+
+.app-header-transparent .nav-link-premium {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.app-header-transparent .nav-link-premium:hover {
+  color: #ffffff !important;
+}
+
+.app-header-transparent .nav-link-premium::after {
+  background: var(--primary-light);
+  box-shadow: 0 0 8px rgba(45, 212, 191, 0.7);
+}
+
+/* Call to Action Accent Button in Nav */
+.nav-cta-pill {
+  padding: 0.45rem 1.15rem !important;
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  border-radius: 20px;
+  letter-spacing: 0.09em;
+  box-shadow: 0 2px 10px rgba(15, 118, 110, 0.25);
+  transition: all 0.25s ease !important;
+}
+
+.nav-cta-pill::after {
+  display: none !important;
+}
+
+.nav-cta-pill:hover {
+  background: var(--primary-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(15, 118, 110, 0.4);
+}
+
+/* Grouped Controls Pill (Language + Theme) */
+.nav-controls-group {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  gap: 0.4rem;
+  transition: all 0.25s ease;
+}
+
+[data-theme="dark"] .nav-controls-group {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(45, 212, 191, 0.15);
+}
+
+.app-header-transparent .nav-controls-group {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.nav-control-toggle {
+  background: transparent;
+  border: none;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-soft);
+  cursor: pointer;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.nav-control-toggle:hover {
+  color: var(--primary);
+}
+
+.app-header-transparent .nav-control-toggle {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.app-header-transparent .nav-control-toggle:hover {
+  color: #ffffff;
+}
+
+.nav-control-sep {
+  width: 1px;
+  height: 12px;
+  background: var(--border-color);
+}
+
+.app-header-transparent .nav-control-sep {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.profile-badge-premium {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 1.1rem;
+  background: var(--primary-soft);
+  border: 1px solid var(--border-color);
+  border-radius: 30px;
+  color: var(--text-main) !important;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+
+.profile-badge-premium:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.profile-badge-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.theme-toggle {
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.25s ease;
+  width: 32px;
+  height: 32px;
+}
+
+.theme-toggle:hover {
+  background: var(--primary-soft);
+  transform: rotate(20deg) scale(1.05);
+}
+
+/* =====================================================
+   Split Hero Banner Layout (Responsive Layout)
+   ===================================================== */
+.hero-split-container {
+  display: flex;
+  min-height: 660px;
+  background: var(--bg-main);
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  overflow: hidden;
+  background-image: url('/pakistani_mechanics_hero.png');
+  background-size: cover;
+  background-position: 70% 25%;
+  display: flex;
+  align-items: center;
+}
+
+/* Gradient overlay: opaque on left (text side), fades to transparent on right */
+.hero-split-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    var(--bg-main) 0%,
+    var(--bg-main) 35%,
+    rgba(15, 118, 110, 0.55) 58%,
+    transparent 80%
+  );
+  z-index: 1;
+}
+
+[data-theme="dark"] .hero-split-container::before {
+  background: linear-gradient(
+    100deg,
+    var(--bg-main) 0%,
+    var(--bg-main) 35%,
+    rgba(4, 47, 46, 0.65) 58%,
+    transparent 80%
+  );
+}
+
+.hero-split-content {
+  position: relative;
+  z-index: 2;
+  padding: 9.5rem 3rem 5rem 5rem;
+  max-width: 620px;
+  width: 55%;
+}
+
+/* Hide the old image div — image is now on the container itself */
+.hero-split-image {
+  display: none;
+}
+
+@media (max-width: 991px) {
+  .hero-split-container {
+    min-height: 520px;
+    background-position: 75% 30%;
+    align-items: flex-end;
+  }
+
+  .hero-split-container::before {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(15, 118, 110, 0.3) 30%,
+      var(--bg-main) 72%,
+      var(--bg-main) 100%
+    );
+  }
+
+  [data-theme="dark"] .hero-split-container::before {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(4, 47, 46, 0.4) 30%,
+      var(--bg-main) 72%,
+      var(--bg-main) 100%
+    );
+  }
+
+  .hero-split-content {
+    width: 100%;
+    max-width: 100%;
+    padding: 3rem 1.5rem 4rem 1.5rem;
+  }
+}
+
+/* =====================================================
+   RTL (Urdu Mode) Mirroring for Hero Section & Navbar
+   ===================================================== */
+[dir="rtl"] .app-brand {
+  direction: ltr !important; /* Preserves icon + AUTO RESCUE order in Urdu mode */
+}
+
+[dir="rtl"] .hero-split-container {
+  background-image: none !important;
+  justify-content: flex-start;
+}
+
+[dir="rtl"] .hero-split-container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/pakistani_mechanics_hero.png');
+  background-size: cover;
+  background-position: 70% 25%;
+  transform: scaleX(-1); /* Flips picture horizontally so mechanics move to the LEFT side! */
+  z-index: 0;
+}
+
+[dir="rtl"] .hero-split-container::before {
+  background: linear-gradient(
+    260deg,
+    var(--bg-main) 0%,
+    var(--bg-main) 35%,
+    rgba(15, 118, 110, 0.55) 58%,
+    transparent 80%
+  ) !important;
+  z-index: 1;
+}
+
+[dir="rtl"][data-theme="dark"] .hero-split-container::before,
+[dir="rtl"] [data-theme="dark"] .hero-split-container::before,
+[data-theme="dark"][dir="rtl"] .hero-split-container::before {
+  background: linear-gradient(
+    260deg,
+    var(--bg-main) 0%,
+    var(--bg-main) 35%,
+    rgba(4, 47, 46, 0.65) 58%,
+    transparent 80%
+  ) !important;
+}
+
+[dir="rtl"] .hero-split-content {
+  padding: 9.5rem 5rem 5rem 3rem;
+  text-align: right;
+  margin-right: 0;
+  margin-left: auto;
+}
+
+@media (max-width: 991px) {
+  [dir="rtl"] .hero-split-container::after {
+    background-position: 75% 30%;
+    transform: none;
+  }
+
+  [dir="rtl"] .hero-split-container::before {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(15, 118, 110, 0.3) 30%,
+      var(--bg-main) 72%,
+      var(--bg-main) 100%
+    ) !important;
+  }
+
+  [dir="rtl"] .hero-split-content {
+    padding: 3rem 1.5rem 4rem 1.5rem;
+    margin: 0;
+  }
 }

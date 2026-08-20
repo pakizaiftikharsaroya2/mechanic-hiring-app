@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient';
+import { supabase, isMock } from '../lib/supabaseClient';
 
 /**
  * Creates a new service request for the logged-in client.
@@ -80,6 +80,29 @@ export async function fetchRequestById(requestId) {
  * where two mechanics both accept the same PENDING request.
  */
 export async function acceptRequest(requestId) {
+  if (isMock) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const { data, error } = await supabase
+      .from('service_requests')
+      .update({ mechanic_id: session?.user?.id, status: 'ACCEPTED' })
+      .eq('id', requestId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Bump the mechanic to BUSY so they stop showing up as available.
+    await supabase
+      .from('mechanic_profiles')
+      .update({ status: 'BUSY' })
+      .eq('user_id', session?.user?.id);
+
+    return data;
+  }
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -102,6 +125,31 @@ export async function acceptRequest(requestId) {
  * relying on the DB trigger (defense in depth + a nicer error message).
  */
 export async function updateRequestStatus(requestId, newStatus) {
+  if (isMock) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const { data, error } = await supabase
+      .from('service_requests')
+      .update({ status: newStatus })
+      .eq('id', requestId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // If completed, set mechanic profile status back to ONLINE
+    if (newStatus === 'COMPLETED') {
+      await supabase
+        .from('mechanic_profiles')
+        .update({ status: 'ONLINE' })
+        .eq('user_id', session?.user?.id);
+    }
+
+    return data;
+  }
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -120,14 +168,36 @@ export async function updateRequestStatus(requestId, newStatus) {
 }
 
 /** Client cancelling their own PENDING/ACCEPTED/EN_ROUTE request — plain RLS update is fine here. */
-export async function cancelRequest(requestId) {
+export async function cancelRequest(requestId, reason = '') {
+  // First, fetch request to see if it has an assigned mechanic and get original description
+  const { data: request, error: fetchErr } = await supabase
+    .from('service_requests')
+    .select('mechanic_id, description')
+    .eq('id', requestId)
+    .single();
+
+  if (fetchErr) throw fetchErr;
+
+  const updatedDescription = reason 
+    ? `${request.description}\n[Cancellation Reason: ${reason}]`
+    : request.description;
+
   const { data, error } = await supabase
     .from('service_requests')
-    .update({ status: 'CANCELLED' })
+    .update({ status: 'CANCELLED', description: updatedDescription })
     .eq('id', requestId)
     .select()
     .single();
   if (error) throw error;
+
+  // If there was an assigned mechanic, set their profile status back to ONLINE
+  if (request?.mechanic_id) {
+    await supabase
+      .from('mechanic_profiles')
+      .update({ status: 'ONLINE' })
+      .eq('user_id', request.mechanic_id);
+  }
+
   return data;
 }
 
