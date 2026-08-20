@@ -7,14 +7,15 @@ import { supabase, isMock } from '../lib/supabaseClient';
 export async function createRequest(clientId, requestData) {
   const payload = {
     client_id: clientId,
+    status: 'PENDING',
     vehicle_make: requestData.vehicleMake,
     vehicle_model: requestData.vehicleModel,
     vehicle_color: requestData.vehicleColor,
     breakdown_type: requestData.breakdownType,
     service_type: requestData.serviceType,
     description: requestData.description,
-    latitude: requestData.latitude,
-    longitude: requestData.longitude,
+    latitude: requestData.latitude || 31.5204, // Default Lahore fallback if GPS unavailable
+    longitude: requestData.longitude || 74.3587,
     location_text: requestData.locationText,
     budget: requestData.budget || null,
     payment_method: requestData.paymentMethod,

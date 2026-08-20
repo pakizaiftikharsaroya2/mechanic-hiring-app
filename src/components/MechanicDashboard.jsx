@@ -129,14 +129,23 @@ export default function MechanicDashboard() {
 
   const formatPKR = (amount) => `Rs. ${Number(amount).toLocaleString('en-PK')}`;
 
-  const withDistance = mechProfile?.latitude
-    ? available.map((r) => ({
-        ...r,
-        _distanceKm: haversineDistanceKm(mechProfile.latitude, mechProfile.longitude, r.latitude, r.longitude),
-      }))
-      .filter((r) => r._distanceKm <= 5.0) // Strictly limit matching requests to 5 km radius
-      .sort((a, b) => a._distanceKm - b._distanceKm)
-    : [];
+  const withDistance = available.map((r) => {
+    let dist = null;
+    if (mechProfile?.latitude && mechProfile?.longitude && r.latitude && r.longitude) {
+      dist = haversineDistanceKm(mechProfile.latitude, mechProfile.longitude, r.latitude, r.longitude);
+    }
+    return {
+      ...r,
+      _distanceKm: dist,
+    };
+  }).sort((a, b) => {
+    if (a._distanceKm != null && b._distanceKm != null) return a._distanceKm - b._distanceKm;
+    if (a._distanceKm != null) return -1;
+    if (b._distanceKm != null) return 1;
+    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+  });
+
+  const isOffline = mechProfile && mechProfile.status === 'OFFLINE';
 
   return (
     <div className="fade-in" style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem', width: '100%', flexGrow: 1 }}>
@@ -147,13 +156,13 @@ export default function MechanicDashboard() {
             {t('mech_console_sub')}
           </p>
         </div>
-        {!activeRequest && mechProfile && (
+        {!activeRequest && (
           <button
             onClick={toggleOnline}
-            className={mechProfile.status === 'ONLINE' ? 'btn' : 'btn btn-primary'}
-            style={mechProfile.status === 'ONLINE' ? { background: 'rgba(239,68,68,0.08)', color: 'var(--error)', border: '1px solid var(--error)' } : {}}
+            className={isOffline ? 'btn btn-primary' : 'btn'}
+            style={!isOffline ? { background: 'rgba(239,68,68,0.08)', color: 'var(--error)', border: '1px solid var(--error)' } : {}}
           >
-            {mechProfile.status === 'ONLINE' ? t('go_offline') : t('go_online')}
+            {isOffline ? t('go_online') : t('go_offline')}
           </button>
         )}
       </header>
@@ -193,7 +202,7 @@ export default function MechanicDashboard() {
             {t('incoming_requests')}
           </h3>
 
-          {mechProfile?.status !== 'ONLINE' ? (
+          {isOffline ? (
             <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', background: 'var(--bg-card)' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#000000' }}>{t('offline_title')}</h3>
               <p style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>{t('offline_sub')}</p>
