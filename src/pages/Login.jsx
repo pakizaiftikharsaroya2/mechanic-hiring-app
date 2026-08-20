@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { sendRealSMSOTP, verifyRealSMSOTP } from '../lib/firebaseClient';
 
 export default function Login() {
   const { login, loginGoogle, loginPhone, addToast } = useAuth();
@@ -16,7 +17,8 @@ export default function Login() {
   const [clientPassword, setClientPassword] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
-  const [correctOtp, setCorrectOtp] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const [fallbackSimulatedOtp, setFallbackSimulatedOtp] = useState('');
 
   // Standard Credentials States (Mechanic)
   const [email, setEmail] = useState('');
@@ -57,40 +59,62 @@ export default function Login() {
     }
   };
 
-  // Simulate sending SMS OTP
-  const handleSendOtp = () => {
+  // Send Real SMS OTP to mobile phone
+  const handleSendOtp = async () => {
     if (!phoneOrEmail || phoneOrEmail.includes('@') || phoneOrEmail.length < 10) {
-      addToast('Please enter a valid phone number to send OTP.', 'warning');
+      addToast('Please enter a valid Pakistani mobile number (e.g. 0300-1234567).', 'warning');
       return;
     }
     setError('');
-    const randomOtp = Math.floor(1000 + Math.random() * 9000).toString();
-    setCorrectOtp(randomOtp);
-    setOtpSent(true);
-    addToast(`Verification code sent to ${phoneOrEmail}`, 'info');
-    
-    // Simulate real SMS arrival notification in browser
-    setTimeout(() => {
-      alert(`Simulated SMS to ${phoneOrEmail}:\nYour AutoRescue verification code is: ${randomOtp}`);
-    }, 600);
+    setSubmitting(true);
+
+    try {
+      // Attempt real cellular SMS delivery via Firebase Phone Auth
+      const { confirmationResult: conf, formattedNumber } = await sendRealSMSOTP(phoneOrEmail, 'recaptcha-container-login');
+      setConfirmationResult(conf);
+      setOtpSent(true);
+      addToast(`Real SMS sent to ${formattedNumber}. Check your phone!`, 'success');
+    } catch (err) {
+      console.warn('Real SMS gateway notice:', err);
+      
+      // If Firebase project credentials are not yet configured in environment variables,
+      // fallback to simulated OTP with instant visual guidance
+      const randomOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      setFallbackSimulatedOtp(randomOtp);
+      setOtpSent(true);
+      addToast(`Real SMS gateway requires Firebase keys. Simulated OTP: ${randomOtp}`, 'info');
+      setTimeout(() => {
+        alert(`AutoRescue SMS Gateway Notice:\nTo receive SMS on physical mobile phones, add your VITE_FIREBASE_API_KEY.\n\nYour temporary 6-digit test code is: ${randomOtp}`);
+      }, 500);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Handle phone verification submit (Client)
   const handlePhoneSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (otpCode !== correctOtp) {
-      setError('Invalid verification code. Please check your SMS and try again.');
-      addToast('Invalid verification code', 'error');
-      return;
-    }
     setSubmitting(true);
+
     try {
+      if (confirmationResult) {
+        // Verify real cellular SMS code via Firebase
+        await verifyRealSMSOTP(confirmationResult, otpCode);
+      } else if (fallbackSimulatedOtp) {
+        // Verify fallback OTP
+        if (otpCode !== fallbackSimulatedOtp) {
+          throw new Error('Invalid verification code. Please check your SMS and try again.');
+        }
+      }
+
       await loginPhone(phoneOrEmail);
+      addToast('Phone number verified successfully!', 'success');
       navigate('/');
     } catch (err) {
-      setError('Phone login failed.');
-      addToast('Authentication failed', 'error');
+      console.error('OTP verification failure:', err);
+      setError(err.message || 'Invalid SMS verification code. Please check your phone.');
+      addToast('Verification failed', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -257,25 +281,29 @@ export default function Login() {
                 </div>
               )}
 
+              {/* Hidden reCAPTCHA verifier container for cellular SMS networks */}
+              <div id="recaptcha-container-login"></div>
+
               {otpSent && (
-                <div className="form-group" style={{ marginTop: '0.75rem' }}>
+                <div className="form-group" style={{ marginTop: '1rem' }}>
                   <label htmlFor="otp">{t('otp_label')}</label>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', gap: '0.65rem' }}>
                     <input 
                       id="otp" 
                       type="text" 
                       className="form-control" 
-                      maxLength={4} 
-                      placeholder={t('otp_placeholder_input')}
+                      maxLength={6} 
+                      placeholder="Enter 6-digit SMS code"
                       value={otpCode} 
-                      onChange={(e) => setOtpCode(e.target.value)} 
+                      onChange={(e) => setOtpCode(e.target.value.trim())} 
                       required 
+                      style={{ padding: '0.75rem 1rem', fontSize: '0.95rem', letterSpacing: '0.1em' }}
                     />
                     <button
                       type="button"
-                      onClick={() => { setOtpSent(false); setOtpCode(''); }}
+                      onClick={() => { setOtpSent(false); setOtpCode(''); setConfirmationResult(null); }}
                       className="btn btn-outline"
-                      style={{ fontSize: '0.75rem', padding: '0 0.75rem' }}
+                      style={{ fontSize: '0.8rem', padding: '0 1rem' }}
                     >
                       {t('cancel')}
                     </button>

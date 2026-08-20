@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { sendRealSMSOTP, verifyRealSMSOTP } from '../lib/firebaseClient';
 
 export default function Register() {
   const { register, loginGoogle, loginPhone, addToast } = useAuth();
@@ -29,7 +30,8 @@ export default function Register() {
   // Emergency Phone OTP States (Client)
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
-  const [correctOtp, setCorrectOtp] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const [fallbackSimulatedOtp, setFallbackSimulatedOtp] = useState('');
 
   // Live Webcam States (Mechanic Only)
   const [cameraActiveField, setCameraActiveField] = useState(null); // 'cnicFront' | 'cnicBack' | 'selfie' | null
@@ -148,23 +150,35 @@ export default function Register() {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  // Phone SMS OTP Sending (Client)
-  const handleSendOtp = () => {
+  };  // Phone Real SMS OTP Sending (Client)
+  const handleSendOtp = async () => {
     if (!form.phone || form.phone.length < 10) {
-      addToast('Please enter a valid phone number.', 'warning');
+      addToast('Please enter a valid Pakistani mobile number (e.g. 0300-1234567).', 'warning');
       return;
     }
     setError('');
-    const randomOtp = Math.floor(1000 + Math.random() * 9000).toString();
-    setCorrectOtp(randomOtp);
-    setOtpSent(true);
-    addToast(`SMS sent to ${form.phone}!`, 'info');
-    
-    setTimeout(() => {
-      alert(`Simulated SMS to ${form.phone}:\nYour AutoRescue verification code is: ${randomOtp}`);
-    }, 600);
+    setSubmitting(true);
+
+    try {
+      // Attempt real cellular SMS delivery via Firebase Phone Auth
+      const { confirmationResult: conf, formattedNumber } = await sendRealSMSOTP(form.phone, 'recaptcha-container-register');
+      setConfirmationResult(conf);
+      setOtpSent(true);
+      addToast(`Real SMS sent to ${formattedNumber}. Check your phone!`, 'success');
+    } catch (err) {
+      console.warn('Real SMS gateway notice:', err);
+
+      // Graceful fallback with clear developer instructions
+      const randomOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      setFallbackSimulatedOtp(randomOtp);
+      setOtpSent(true);
+      addToast(`Real SMS gateway requires Firebase keys. Simulated OTP: ${randomOtp}`, 'info');
+      setTimeout(() => {
+        alert(`AutoRescue SMS Gateway Notice:\nTo receive SMS on physical mobile phones, add your VITE_FIREBASE_API_KEY.\n\nYour temporary 6-digit test code is: ${randomOtp}`);
+      }, 500);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Form Submit Router
@@ -174,18 +188,23 @@ export default function Register() {
 
     // Client flow: verify OTP first
     if (form.role === 'CLIENT') {
-      if (otpCode !== correctOtp) {
-        setError('Invalid verification code. Check SMS.');
-        addToast('Invalid verification code', 'error');
-        return;
-      }
       setSubmitting(true);
       try {
+        if (confirmationResult) {
+          await verifyRealSMSOTP(confirmationResult, otpCode);
+        } else if (fallbackSimulatedOtp) {
+          if (otpCode !== fallbackSimulatedOtp) {
+            throw new Error('Invalid verification code. Please check your SMS and try again.');
+          }
+        }
+
         await loginPhone(form.phone);
+        addToast('Registered successfully via phone SMS!', 'success');
         navigate('/');
       } catch (err) {
-        setError('Emergency registration failed.');
-        addToast('Registration failed', 'error');
+        console.error('OTP verification failure:', err);
+        setError(err.message || 'Invalid SMS verification code. Please check your phone.');
+        addToast('Verification failed', 'error');
       } finally {
         setSubmitting(false);
       }
@@ -302,7 +321,8 @@ export default function Register() {
                     </button>
                   )}
                 </div>
-              </div>
+              </div>              {/* Hidden reCAPTCHA verifier container for cellular SMS networks */}
+              <div id="recaptcha-container-register"></div>
 
               {otpSent && (
                 <div className="form-group" style={{ marginTop: '1rem' }}>
@@ -313,15 +333,15 @@ export default function Register() {
                       type="text" 
                       className="form-control" 
                       value={otpCode} 
-                      onChange={(e) => setOtpCode(e.target.value)} 
-                      placeholder="Enter 4-digit SMS OTP"
-                      maxLength={4}
+                      onChange={(e) => setOtpCode(e.target.value.trim())} 
+                      placeholder="Enter 6-digit SMS code"
+                      maxLength={6}
                       required 
-                      style={{ padding: '0.75rem 1rem', fontSize: '0.92rem' }}
+                      style={{ padding: '0.75rem 1rem', fontSize: '0.95rem', letterSpacing: '0.1em' }}
                     />
                     <button
                       type="button"
-                      onClick={() => { setOtpSent(false); setOtpCode(''); }}
+                      onClick={() => { setOtpSent(false); setOtpCode(''); setConfirmationResult(null); }}
                       className="btn btn-outline"
                       style={{ fontSize: '0.8rem', padding: '0 1rem' }}
                     >
