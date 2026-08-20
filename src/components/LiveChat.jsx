@@ -28,6 +28,15 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
 
   useEffect(() => {
     loadMessages();
+    const handleStorage = (e) => {
+      if (!e.key || e.key.includes('messages')) loadMessages();
+    };
+    window.addEventListener('storage', handleStorage);
+    const interval = setInterval(loadMessages, 1500);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
   }, [loadMessages]);
 
   // Realtime: new messages from the other party appear without a refresh.

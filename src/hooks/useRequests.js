@@ -15,7 +15,6 @@ export function useClientRequests(clientId) {
   const reload = useCallback(async () => {
     if (!clientId) return;
     try {
-      setLoading(true);
       const data = await fetchClientRequests(clientId);
       setRequests(data);
       setError(null);
@@ -28,6 +27,16 @@ export function useClientRequests(clientId) {
 
   useEffect(() => {
     reload();
+    // Cross-tab & multi-window instant sync
+    const handleStorage = (e) => {
+      if (!e.key || e.key.includes('service_requests')) reload();
+    };
+    window.addEventListener('storage', handleStorage);
+    const interval = setInterval(reload, 2000);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
   }, [reload]);
 
   useEffect(() => {
@@ -63,7 +72,6 @@ export function useAvailableRequests() {
 
   const reload = useCallback(async () => {
     try {
-      setLoading(true);
       const data = await fetchAvailableRequests();
       setRequests(data);
       setError(null);
@@ -76,6 +84,16 @@ export function useAvailableRequests() {
 
   useEffect(() => {
     reload();
+    // Cross-tab & multi-window instant sync for incoming requests
+    const handleStorage = (e) => {
+      if (!e.key || e.key.includes('service_requests')) reload();
+    };
+    window.addEventListener('storage', handleStorage);
+    const interval = setInterval(reload, 2000);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
   }, [reload]);
 
   useEffect(() => {
@@ -112,7 +130,6 @@ export function useMechanicRequests(mechanicId) {
   const reload = useCallback(async () => {
     if (!mechanicId) return;
     try {
-      setLoading(true);
       const data = await fetchMechanicRequests(mechanicId);
       setRequests(data);
       setError(null);
@@ -125,6 +142,16 @@ export function useMechanicRequests(mechanicId) {
 
   useEffect(() => {
     reload();
+    // Cross-tab & multi-window instant sync
+    const handleStorage = (e) => {
+      if (!e.key || e.key.includes('service_requests')) reload();
+    };
+    window.addEventListener('storage', handleStorage);
+    const interval = setInterval(reload, 2000);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
   }, [reload]);
 
   useEffect(() => {
