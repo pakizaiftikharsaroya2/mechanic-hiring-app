@@ -5,7 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 
 export default function Profile() {
   const { user, profile, updateLocalProfile, addToast, role, logout } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
 
   const [profileName, setProfileName] = useState('');
@@ -62,27 +62,34 @@ export default function Profile() {
   };
 
   return (
-    <div className="fade-in" style={{ maxWidth: '600px', margin: '4rem auto', padding: '0 1.5rem', width: '100%', flexGrow: 1 }}>
-      <div className="glass-panel" style={{ padding: '2.5rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
-        <header style={{ marginBottom: '1.75rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div style={{ textAlign: 'left' }}>
-              <span className="section-eyebrow" style={{ display: 'block' }}>{t('account_management')}</span>
-              <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: '0.25rem 0' }}>{t('personal_details')}</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+    <div className="fade-in" style={{ maxWidth: '640px', margin: '3.5rem auto', padding: '0 1.5rem', width: '100%', flexGrow: 1 }}>
+      <div className="glass-panel" style={{ padding: '2.5rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)' }}>
+        
+        {/* Header with proper RTL alignment and spacing */}
+        <header style={{ marginBottom: '2rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '220px', textAlign: 'start' }}>
+              <span className="section-eyebrow" style={{ display: 'block', marginBottom: '0.25rem' }}>
+                {t('account_management')}
+              </span>
+              <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0.25rem 0', color: 'var(--text-main)' }}>
+                {t('personal_details')}
+              </h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.35rem', lineHeight: '1.5' }}>
                 {t('profile_sub')}
               </p>
             </div>
+            
             <button
               type="button"
               onClick={logout}
               style={{
                 background: 'transparent',
-                border: '1px solid var(--error)',
+                border: '1.5px solid var(--error)',
                 color: 'var(--error)',
-                padding: '0.45rem 1.1rem',
-                fontWeight: 600,
-                fontSize: '0.8rem',
+                padding: '0.5rem 1.2rem',
+                fontWeight: 700,
+                fontSize: '0.82rem',
                 borderRadius: 'var(--radius-sm)',
                 cursor: 'pointer',
                 flexShrink: 0,
@@ -97,47 +104,93 @@ export default function Profile() {
         </header>
 
         <form onSubmit={handleSave} style={{ fontSize: '0.9rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
             <div className="form-group">
-              <label style={{ display: 'block', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>{t('account_type')}</label>
-              <input type="text" disabled value={role || ''} style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-card)', color: 'var(--text-muted)', cursor: 'not-allowed' }} />
+              <label style={{ display: 'block', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textAlign: 'start', fontSize: '0.82rem' }}>
+                {t('account_type')}
+              </label>
+              <input 
+                type="text" 
+                disabled 
+                value={role === 'MECHANIC' ? (language === 'ur' ? 'تصدیق شدہ مکینک (MECHANIC)' : 'Certified Mechanic') : (language === 'ur' ? 'کسٹمر / کلائنٹ (CLIENT)' : 'Standard Client')} 
+                style={{ width: '100%', padding: '0.65rem 0.85rem', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'var(--bg-main)', color: 'var(--text-muted)', cursor: 'not-allowed', textAlign: 'start', fontSize: '0.85rem' }} 
+              />
             </div>
             <div className="form-group">
-              <label style={{ display: 'block', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>{t('email_label')}</label>
-              <input type="email" value={profileEmail} onChange={(e) => setProfileEmail(e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--border-color)', borderRadius: '4px', outline: 'none', background: 'var(--bg-main)', color: 'var(--text-main)' }} />
+              <label style={{ display: 'block', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textAlign: 'start', fontSize: '0.82rem' }}>
+                {t('email_label')}
+              </label>
+              <input 
+                type="email" 
+                value={profileEmail} 
+                onChange={(e) => setProfileEmail(e.target.value)} 
+                placeholder="name@example.com"
+                style={{ width: '100%', padding: '0.65rem 0.85rem', border: '1px solid var(--border-color)', borderRadius: '6px', outline: 'none', background: 'var(--bg-main)', color: 'var(--text-main)', textAlign: 'start', fontSize: '0.85rem' }} 
+              />
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
             <div className="form-group">
-              <label style={{ display: 'block', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>{t('full_name')}</label>
-              <input type="text" required value={profileName} onChange={(e) => setProfileName(e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--border-color)', borderRadius: '4px', outline: 'none', background: 'var(--bg-main)', color: 'var(--text-main)' }} />
+              <label style={{ display: 'block', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textAlign: 'start', fontSize: '0.82rem' }}>
+                {t('full_name')}
+              </label>
+              <input 
+                type="text" 
+                required 
+                value={profileName} 
+                onChange={(e) => setProfileName(e.target.value)} 
+                style={{ width: '100%', padding: '0.65rem 0.85rem', border: '1px solid var(--border-color)', borderRadius: '6px', outline: 'none', background: 'var(--bg-main)', color: 'var(--text-main)', textAlign: 'start', fontSize: '0.85rem' }} 
+              />
             </div>
             <div className="form-group">
-              <label style={{ display: 'block', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>{t('phone_label')}</label>
-              <input type="text" required value={profilePhone} onChange={(e) => setProfilePhone(e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--border-color)', borderRadius: '4px', outline: 'none', background: 'var(--bg-main)', color: 'var(--text-main)' }} />
+              <label style={{ display: 'block', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textAlign: 'start', fontSize: '0.82rem' }}>
+                {t('phone_label')}
+              </label>
+              <input 
+                type="text" 
+                required 
+                value={profilePhone} 
+                onChange={(e) => setProfilePhone(e.target.value)} 
+                style={{ width: '100%', padding: '0.65rem 0.85rem', border: '1px solid var(--border-color)', borderRadius: '6px', outline: 'none', background: 'var(--bg-main)', color: 'var(--text-main)', textAlign: 'start', fontSize: '0.85rem' }} 
+              />
             </div>
           </div>
 
-          {/* Change Password Block */}
+          {/* Change Password Block with proper logical padding for eye toggle */}
           <div style={{ borderTop: '1px dashed var(--border-color)', marginTop: '1.75rem', paddingTop: '1.25rem' }}>
-            <h4 style={{ fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.75rem', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>{t('change_password_block')}</h4>
+            <h4 style={{ fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.85rem', fontSize: '0.82rem', letterSpacing: '0.04em', textAlign: 'start' }}>
+              {t('change_password_block')}
+            </h4>
             <div className="form-group">
-              <label style={{ display: 'block', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>{t('new_password')}</label>
+              <label style={{ display: 'block', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textAlign: 'start', fontSize: '0.82rem' }}>
+                {t('new_password')}
+              </label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <input 
                   type={showPassword ? 'text' : 'password'} 
                   placeholder={t('new_password_placeholder')} 
                   value={newPassword} 
                   onChange={(e) => setNewPassword(e.target.value)} 
-                  style={{ width: '100%', padding: '0.5rem', paddingRight: '2.5rem', border: '1px solid var(--border-color)', borderRadius: '4px', outline: 'none', background: 'var(--bg-main)', color: 'var(--text-main)' }} 
+                  style={{ 
+                    width: '100%', 
+                    padding: '0.65rem 0.85rem', 
+                    paddingInlineEnd: '2.5rem', 
+                    border: '1px solid var(--border-color)', 
+                    borderRadius: '6px', 
+                    outline: 'none', 
+                    background: 'var(--bg-main)', 
+                    color: 'var(--text-main)',
+                    textAlign: 'start',
+                    fontSize: '0.85rem'
+                  }} 
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   style={{
                     position: 'absolute',
-                    right: '0.5rem',
+                    insetInlineEnd: '0.65rem',
                     background: 'transparent',
                     border: 'none',
                     cursor: 'pointer',
@@ -161,11 +214,11 @@ export default function Profile() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '2.25rem' }}>
             <button type="button" onClick={handleGoToDashboard} className="btn btn-outline" style={{ flex: 1, padding: '0.75rem' }}>
               {t('cancel')}
             </button>
-            <button type="submit" className="btn btn-primary" style={{ flex: 2, padding: '0.75rem' }} disabled={submitting}>
+            <button type="submit" className="btn btn-primary" style={{ flex: 2, padding: '0.75rem', fontWeight: 700 }} disabled={submitting}>
               {submitting ? t('saving') : t('save_profile_details')}
             </button>
           </div>
