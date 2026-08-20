@@ -1,4 +1,5 @@
 import { supabase, isMock } from '../lib/supabaseClient';
+import { syncCloudRequest } from '../lib/cloudSync';
 
 /**
  * Creates a new service request for the logged-in client.
@@ -28,6 +29,9 @@ export async function createRequest(clientId, requestData) {
     .single();
 
   if (error) throw error;
+  if (data) {
+    syncCloudRequest(data).catch(() => {});
+  }
   return data;
 }
 
@@ -103,6 +107,7 @@ export async function acceptRequest(requestId) {
       .update({ status: 'BUSY' })
       .eq('user_id', session?.user?.id);
 
+    if (data) syncCloudRequest(data).catch(() => {});
     return data;
   }
 
@@ -119,6 +124,7 @@ export async function acceptRequest(requestId) {
   });
   const body = await res.json();
   if (!res.ok) throw new Error(body.error || 'Failed to accept request');
+  if (body.request) syncCloudRequest(body.request).catch(() => {});
   return body.request;
 }
 
@@ -150,6 +156,7 @@ export async function updateRequestStatus(requestId, newStatus) {
         .eq('user_id', session?.user?.id);
     }
 
+    if (data) syncCloudRequest(data).catch(() => {});
     return data;
   }
 
@@ -167,6 +174,7 @@ export async function updateRequestStatus(requestId, newStatus) {
   });
   const body = await res.json();
   if (!res.ok) throw new Error(body.error || 'Failed to update status');
+  if (body.request) syncCloudRequest(body.request).catch(() => {});
   return body.request;
 }
 
@@ -201,6 +209,7 @@ export async function cancelRequest(requestId, reason = '') {
       .eq('user_id', request.mechanic_id);
   }
 
+  if (data) syncCloudRequest(data).catch(() => {});
   return data;
 }
 

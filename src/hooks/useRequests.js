@@ -5,6 +5,7 @@ import {
   fetchMechanicRequests,
   fetchAvailableRequests,
 } from '../services/requestService';
+import { subscribeCloudEvents } from '../lib/cloudSync';
 
 /** Client's own requests, kept live via realtime INSERT/UPDATE on service_requests. */
 export function useClientRequests(clientId) {
@@ -33,9 +34,16 @@ export function useClientRequests(clientId) {
     };
     window.addEventListener('storage', handleStorage);
     const interval = setInterval(reload, 2000);
+
+    // Cross-profile & cross-device cloud sync
+    const unsubCloud = subscribeCloudEvents((event) => {
+      if (event.type === 'SYNC_REQUEST') reload();
+    });
+
     return () => {
       window.removeEventListener('storage', handleStorage);
       clearInterval(interval);
+      unsubCloud();
     };
   }, [reload]);
 
@@ -90,9 +98,16 @@ export function useAvailableRequests() {
     };
     window.addEventListener('storage', handleStorage);
     const interval = setInterval(reload, 2000);
+
+    // Cross-profile & cross-device cloud sync
+    const unsubCloud = subscribeCloudEvents((event) => {
+      if (event.type === 'SYNC_REQUEST') reload();
+    });
+
     return () => {
       window.removeEventListener('storage', handleStorage);
       clearInterval(interval);
+      unsubCloud();
     };
   }, [reload]);
 
@@ -148,9 +163,16 @@ export function useMechanicRequests(mechanicId) {
     };
     window.addEventListener('storage', handleStorage);
     const interval = setInterval(reload, 2000);
+
+    // Cross-profile & cross-device cloud sync
+    const unsubCloud = subscribeCloudEvents((event) => {
+      if (event.type === 'SYNC_REQUEST') reload();
+    });
+
     return () => {
       window.removeEventListener('storage', handleStorage);
       clearInterval(interval);
+      unsubCloud();
     };
   }, [reload]);
 
