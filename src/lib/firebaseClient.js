@@ -1,14 +1,15 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
 
-// Firebase configuration from environment variables
+// Your live Firebase configuration for AutoRescue Pakistan
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDummyKeyForFallbackSetup12345",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "autorescue-pakistan.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "autorescue-pakistan",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "autorescue-pakistan.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "123456789012",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:123456789012:web:abcdef123456"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDH_b0M2hR13V4aUij8AIZy8JrZm8jt4wU",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "autorescue-74c40.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "autorescue-74c40",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "autorescue-74c40.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "437567694106",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:437567694106:web:7d82a357e12a9185fe38a3",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-TE958K18TK"
 };
 
 // Initialize Firebase App instance
@@ -34,7 +35,7 @@ export function formatPakistaniPhoneNumber(input) {
 }
 
 /**
- * Setup reCAPTCHA verifier for phone authentication (required by cellular telecom networks)
+ * Setup reCAPTCHA verifier for phone authentication
  */
 export function setupRecaptcha(containerId = 'recaptcha-container') {
   if (typeof window === 'undefined') return null;
@@ -50,10 +51,10 @@ export function setupRecaptcha(containerId = 'recaptcha-container') {
   window.recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
     size: 'invisible',
     callback: () => {
-      // reCAPTCHA solved - will proceed with real SMS submit
+      // reCAPTCHA solved
     },
     'expired-callback': () => {
-      console.warn('reCAPTCHA expired. Please try again.');
+      console.warn('reCAPTCHA expired. Please retry.');
     }
   });
 
