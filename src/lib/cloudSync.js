@@ -93,11 +93,54 @@ export async function syncCloudLocation(loc) {
 }
 
 /**
+ * Fetch recent cloud events to immediately populate requests when opening the page
+ */
+export async function fetchRecentCloudEvents(onEvent) {
+  try {
+    const res = await fetch(`https://ntfy.sh/${RELAY_CHANNEL}/json?poll=1&since=24h`);
+    const text = await res.text();
+    const lines = text.trim().split('\n').filter(Boolean);
+    
+    lines.forEach((line) => {
+      try {
+        const payload = JSON.parse(line);
+        if (payload && payload.message) {
+          const parsed = JSON.parse(payload.message);
+          if (parsed && parsed.type && parsed.data) {
+            if (parsed.type === 'SYNC_REQUEST') {
+              const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+              const idx = local.findIndex((r) => r.id === parsed.data.id);
+              if (idx >= 0) {
+                local[idx] = { ...local[idx], ...parsed.data };
+              } else {
+                local.unshift(parsed.data);
+              }
+              localStorage.setItem('mock_service_requests', JSON.stringify(local));
+            } else if (parsed.type === 'SYNC_MESSAGE') {
+              const local = JSON.parse(localStorage.getItem('mock_messages') || '[]');
+              if (!local.some((m) => m.id === parsed.data.id)) {
+                local.push(parsed.data);
+                localStorage.setItem('mock_messages', JSON.stringify(local));
+              }
+            }
+            if (onEvent) onEvent(parsed);
+          }
+        }
+      } catch (e) {}
+    });
+  } catch (err) {
+    console.warn('Recent cloud events fetch notice:', err);
+  }
+}
+
+/**
  * Subscribe to real-time events across different Google profiles, browsers, and devices
  */
 export function subscribeCloudEvents(onEvent) {
-  let eventSource = null;
+  // 1. Immediately hydrate past 24h events
+  fetchRecentCloudEvents(onEvent);
 
+  let eventSource = null;
   try {
     eventSource = new EventSource(`https://ntfy.sh/${RELAY_CHANNEL}/sse`);
     eventSource.onmessage = (event) => {
