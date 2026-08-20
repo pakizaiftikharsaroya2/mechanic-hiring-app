@@ -22,11 +22,12 @@ export default function MechanicDashboard() {
   // Veriff SDK Simulator states
   const [showVeriffModal, setShowVeriffModal] = useState(false);
   const [veriffStep, setVeriffStep] = useState(0);
-  const [veriffAnalyzing, setVeriffAnalyzing] = useState(false);
-  const stopWatchRef = useRef(null);
+  const [activeJob, setActiveJob] = useState(null);
 
-  const activeRequest = (activeRequestId && myRequests.find((r) => r.id === activeRequestId && !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase())))
-    || myRequests.find((r) => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()));
+  const activeRequest = (activeJob && !['CANCELLED'].includes(activeJob.status?.toUpperCase()) ? activeJob : null)
+    || (activeRequestId && myRequests.find((r) => r.id === activeRequestId && !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase())))
+    || myRequests.find((r) => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()))
+    || (activeRequestId && available.find((r) => r.id === activeRequestId));
 
   useEffect(() => {
     if (!user) return;
@@ -104,7 +105,9 @@ export default function MechanicDashboard() {
     try {
       const updated = await acceptRequest(reqId);
       addToast('Job accepted! Live GPS Routing started.', 'success');
-      setActiveRequestId(updated?.id || reqId);
+      const finalId = updated?.id || reqId;
+      setActiveRequestId(finalId);
+      setActiveJob(updated || { id: reqId, status: 'ACCEPTED' });
       setMechProfile((prev) => (prev ? { ...prev, status: 'BUSY' } : prev));
       await reloadMine();
       await reloadAvailable();
@@ -115,9 +118,12 @@ export default function MechanicDashboard() {
 
   const handleStatusChange = async (newStatus) => {
     try {
-      await updateRequestStatus(activeRequest.id, newStatus);
+      const reqId = activeRequest?.id || activeRequestId;
+      const updated = await updateRequestStatus(reqId, newStatus);
       addToast(`Status updated to ${newStatus.replace('_', ' ')}`, 'success');
-      reloadMine();
+      setActiveJob((prev) => (prev ? { ...prev, ...updated, status: newStatus } : updated));
+      await reloadMine();
+      await reloadAvailable();
       if (newStatus === 'COMPLETED' || newStatus === 'CANCELLED') {
         setMechProfile((prev) => (prev ? { ...prev, status: 'ONLINE' } : prev));
       }

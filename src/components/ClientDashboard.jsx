@@ -40,8 +40,22 @@ export default function ClientDashboard() {
   const [cancelReason, setCancelReason] = useState('');
   const [otherReasonText, setOtherReasonText] = useState('');
 
+  // Rating & Review State
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [selectedTip, setSelectedTip] = useState(0);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+
   const activeRequest = requests.find((r) => r.id === activeRequestId);
   const statusUpper = activeRequest?.status ? activeRequest.status.toUpperCase() : 'PENDING';
+
+  // Automatically show rating & review modal when job completes
+  React.useEffect(() => {
+    if (statusUpper === 'COMPLETED' && !reviewSubmitted) {
+      setShowReviewModal(true);
+    }
+  }, [statusUpper, reviewSubmitted]);
 
   // Automatically keep ongoing active request open when navigating to other tabs (like Spare Parts) or reloading
   React.useEffect(() => {
@@ -766,6 +780,120 @@ export default function ClientDashboard() {
                 {t('confirm_cancellation_btn')}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ----------------- RATING & REVIEW MODAL ----------------- */}
+      {showReviewModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.65)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 99999,
+          padding: '1rem',
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div className="glass-panel" style={{
+            background: 'var(--bg-card)',
+            padding: '2rem',
+            width: '100%',
+            maxWidth: '480px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            borderRadius: 'var(--radius-lg)',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🎉</div>
+            <h3 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.35rem', color: 'var(--text-main)' }}>
+              Service Completed!
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+              How was your experience with <strong>{mechanicProfile?.name || 'Mechanic Muhammad'}</strong>?
+            </p>
+
+            {/* 5-Star Rating Selector */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setRating(star)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    fontSize: '2rem',
+                    cursor: 'pointer',
+                    color: star <= rating ? '#fbbf24' : '#cbd5e1',
+                    transform: star <= rating ? 'scale(1.1)' : 'scale(1)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+
+            {/* Optional Tip Selector */}
+            <div style={{ marginBottom: '1.25rem', textAlign: 'left' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-main)' }}>
+                Add a Tip for Good Service (Optional):
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                {[0, 200, 500, 1000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setSelectedTip(amt)}
+                    className="btn"
+                    style={{
+                      padding: '0.4rem 0.2rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      background: selectedTip === amt ? 'var(--primary)' : 'var(--bg-main)',
+                      color: selectedTip === amt ? '#ffffff' : 'var(--text-main)',
+                      border: selectedTip === amt ? '1.5px solid var(--primary)' : '1px solid var(--border-color)',
+                      borderRadius: '6px'
+                    }}
+                  >
+                    {amt === 0 ? 'No Tip' : `Rs. ${amt}`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Review Comment Area */}
+            <div style={{ marginBottom: '1.5rem', textAlign: 'left' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.35rem', color: 'var(--text-main)' }}>
+                Write your Review & Comments:
+              </label>
+              <textarea
+                className="form-control"
+                rows={3}
+                placeholder="Share details about the speed, behavior, and repair quality..."
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                style={{ width: '100%', fontSize: '0.85rem' }}
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setReviewSubmitted(true);
+                setShowReviewModal(false);
+                addToast(`Review submitted with ${rating} Stars! Thank you for rating your mechanic.`, 'success');
+              }}
+              className="btn btn-primary"
+              style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', fontWeight: 700 }}
+            >
+              Submit Review & Rating ⭐
+            </button>
           </div>
         </div>
       )}
