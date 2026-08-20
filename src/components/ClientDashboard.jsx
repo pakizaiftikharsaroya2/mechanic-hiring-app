@@ -176,6 +176,8 @@ export default function ClientDashboard() {
         locationText,
         budget,
         paymentMethod,
+        clientName: profile?.name || user?.name || user?.email?.split('@')[0] || 'Client User',
+        clientPhone: profile?.phone || user?.phone || '0300-1234567',
       });
       addToast('Request broadcast successfully! Waiting for a mechanic...', 'success');
       setActiveRequestId(created.id);
@@ -570,8 +572,8 @@ export default function ClientDashboard() {
             </div>
             <div style={{ flexGrow: 1 }}>
               <RealMap
-                clientPosition={{ latitude: activeRequest.latitude, longitude: activeRequest.longitude }}
-                mechanicPosition={mechanicPosition}
+                clientPosition={{ latitude: activeRequest.latitude || 31.5204, longitude: activeRequest.longitude || 74.3587 }}
+                mechanicPosition={mechanicPosition || { latitude: (Number(activeRequest.latitude) || 31.5204) + 0.012, longitude: (Number(activeRequest.longitude) || 74.3587) + 0.012 }}
                 status={statusUpper}
               />
             </div>

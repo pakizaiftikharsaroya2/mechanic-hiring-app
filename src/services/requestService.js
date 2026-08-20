@@ -20,6 +20,8 @@ export async function createRequest(clientId, requestData) {
     location_text: requestData.locationText,
     budget: requestData.budget || null,
     payment_method: requestData.paymentMethod,
+    client_name: requestData.clientName || 'Customer / Client',
+    client_phone: requestData.clientPhone || '0300-1234567',
   };
 
   const { data, error } = await supabase

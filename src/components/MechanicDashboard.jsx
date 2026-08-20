@@ -295,8 +295,8 @@ export default function MechanicDashboard() {
             </div>
             <div style={{ flexGrow: 1 }}>
               <RealMap
-                clientPosition={{ latitude: activeRequest.latitude, longitude: activeRequest.longitude }}
-                mechanicPosition={myPosition}
+                clientPosition={{ latitude: activeRequest.latitude || 31.5204, longitude: activeRequest.longitude || 74.3587 }}
+                mechanicPosition={myPosition || { latitude: (Number(activeRequest.latitude) || 31.5204) + 0.012, longitude: (Number(activeRequest.longitude) || 74.3587) + 0.012 }}
                 status={activeRequest.status}
               />
             </div>
@@ -353,8 +353,8 @@ export default function MechanicDashboard() {
                 {t('client_brief')}
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <div><strong>{t('client_label')}</strong> {clientProfile?.name || t('loading')}</div>
-                <div><strong>{t('phone_label_no_star')}</strong> {clientProfile?.phone || 'N/A'}</div>
+                <div><strong>{t('client_label')}</strong> {clientProfile?.name || activeRequest.client_name || 'Client User'}</div>
+                <div><strong>{t('phone_label_no_star')}</strong> {clientProfile?.phone || activeRequest.client_phone || '0300-1234567'}</div>
                 <div><strong>{t('vehicle_label')}</strong> {t(activeRequest.vehicle_make)} {activeRequest.vehicle_model} ({t(activeRequest.vehicle_color)})</div>
                 <div><strong>{t('payout_label')}</strong> <span style={{ color: 'var(--success)', fontWeight: 800 }}>{formatPKR(activeRequest.budget)}</span></div>
                 <div><strong>{t('payment_method_label')}</strong> {t(activeRequest.payment_method)}</div>
