@@ -466,22 +466,34 @@ export default function LandingPage() {
             <p style={{ color: 'var(--text-soft)', fontSize: '0.95rem', lineHeight: '1.7', marginBottom: '1.5rem' }}>
               {t("Go online when you're free, get matched to nearby jobs automatically, and get paid your way. No subscriptions, no hidden cuts — you set your availability.")}
             </p>
-            <button onClick={() => navigate('/register')} className="btn btn-primary" style={{ padding: '0.8rem 1.75rem' }}>
-              {t('Join as a Mechanic')}
-            </button>
+            {isAuthenticated ? (
+              <button
+                onClick={() => navigate(role === 'MECHANIC' ? '/mechanic' : '/client')}
+                className="btn btn-primary"
+                style={{ padding: '0.8rem 1.75rem', fontWeight: 700 }}
+              >
+                {role === 'MECHANIC' ? t('job_board') : t('open_dashboard')}
+              </button>
+            ) : (
+              <button onClick={() => navigate('/register')} className="btn btn-primary" style={{ padding: '0.8rem 1.75rem', fontWeight: 700 }}>
+                {t('Join as a Mechanic')}
+              </button>
+            )}
           </Reveal>
           <Reveal style={{ order: 1 }}>
             <div className="glass-panel" style={{ padding: '1.75rem', background: 'var(--bg-card)' }}>
               {[
-                ['Flexible hours', 'Go ONLINE or OFFLINE anytime, from your own dashboard.'],
-                ['Fair matching', 'Nearest available mechanic gets shown the job first.'],
-                ['Verified badge', 'Build trust with clients through ratings and job history.'],
-              ].map(([title, copy]) => (
-                <div key={title} style={{ display: 'flex', gap: '0.9rem', padding: '0.85rem 0', borderBottom: '1px solid var(--border-color)' }}>
-                  <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'var(--primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--primary)', fontWeight: 800 }}></div>
+                ['⏱️', 'Flexible hours', 'Go ONLINE or OFFLINE anytime, from your own dashboard.'],
+                ['📍', 'Fair matching', 'Nearest available mechanic gets shown the job first.'],
+                ['🛡️', 'Verified badge', 'Build trust with clients through ratings and job history.'],
+              ].map(([icon, title, copy]) => (
+                <div key={title} style={{ display: 'flex', gap: '0.9rem', padding: '0.85rem 0', borderBottom: '1px solid var(--border-color)', alignItems: 'center' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1.1rem' }}>
+                    {icon}
+                  </div>
                   <div>
                     <strong style={{ fontSize: '0.9rem' }}>{t(title)}</strong>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>{t(copy)}</p>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem', marginBottom: 0 }}>{t(copy)}</p>
                   </div>
                 </div>
               ))}
