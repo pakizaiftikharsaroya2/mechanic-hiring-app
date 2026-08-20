@@ -96,8 +96,65 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
         )}
 
         {!loading && !error && messages.length === 0 && (
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', padding: '1.5rem' }}>
-            {t('no_messages_yet')}
+          <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            <div style={{
+              background: 'rgba(16, 185, 129, 0.08)',
+              border: '1px solid rgba(16, 185, 129, 0.25)',
+              borderRadius: '12px',
+              padding: '1rem',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '1.35rem', marginBottom: '0.35rem' }}>🛡️</div>
+              <strong style={{ fontSize: '0.88rem', color: 'var(--text-main)', display: 'block', marginBottom: '0.35rem' }}>
+                {t('chat_secure_title')}
+              </strong>
+              <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
+                {t('chat_secure_sub')}
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+                {t('quick_messages_label')}
+              </span>
+              {[
+                t('quick_msg_1'),
+                t('quick_msg_2'),
+                t('quick_msg_3'),
+                t('quick_msg_4')
+              ].map((quickText, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSend(null, quickText)}
+                  style={{
+                    textAlign: 'left',
+                    background: 'var(--bg-main)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    padding: '0.5rem 0.75rem',
+                    fontSize: '0.75rem',
+                    color: 'var(--text-main)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    lineHeight: '1.3'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--primary)';
+                    e.currentTarget.style.background = 'rgba(16, 185, 129, 0.06)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border-color)';
+                    e.currentTarget.style.background = 'var(--bg-main)';
+                  }}
+                >
+                  <span>{quickText}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

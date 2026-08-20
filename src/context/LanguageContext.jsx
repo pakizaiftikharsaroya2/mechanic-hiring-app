@@ -417,9 +417,15 @@ const translations = {
     // Client custom login credentials options
     "phone_email_label": "Phone Number or Email *",
     "phone_email_placeholder": "e.g. 03001234567 or email@example.com",
-    "password_placeholder_client": "Enter password (optional if using SMS OTP)",
     "coordination_desk": "Live Support Chat",
-    "chat_with": "Chat with {name}"
+    "chat_with": "Chat with {name}",
+    "chat_secure_title": "AutoRescue Live Coordination Desk",
+    "chat_secure_sub": "Direct channel connected with your verified assistance team. Share parking landmarks or ask for ETA.",
+    "quick_messages_label": "⚡ Quick Suggestions (Tap to send):",
+    "quick_msg_1": "📍 I am waiting by the roadside with hazard lights on.",
+    "quick_msg_2": "⏳ What is your estimated time of arrival (ETA)?",
+    "quick_msg_3": "🔑 I have my car keys and documents ready.",
+    "quick_msg_4": "⛽ I am parked near the main fuel station."
   },
   ur: {
     brand_logo: "آٹو ریسکیو",
@@ -835,10 +841,15 @@ const translations = {
 
     // Client custom login credentials options
     "phone_email_label": "فون نمبر یا ای میل *",
-    "phone_email_placeholder": "مثال: 03001234567 یا ای میل درج کریں",
-    "password_placeholder_client": "پاس ورڈ درج کریں (اگر او ٹی پی نہیں چاہیے)",
     "coordination_desk": "لائیو رابطہ چیٹ",
-    "chat_with": "{name} کے ساتھ چیٹ"
+    "chat_with": "{name} کے ساتھ چیٹ",
+    "chat_secure_title": "آٹو ریسکیو لائیو کوآرڈینیشن ڈیسک",
+    "chat_secure_sub": "تصدیق شدہ مکینک کے ساتھ براہ راست رابطہ۔ گاڑی کی درست لوکیشن، قریبی نشانات یا وقت معلوم کریں۔",
+    "quick_messages_label": "⚡ فوری پیغامات (بھیجنے کے لیے کلک کریں):",
+    "quick_msg_1": "📍 میں سڑک کے کنارے ایمرجنسی لائٹس جلا کر کھڑا ہوں۔",
+    "quick_msg_2": "⏳ آپ کو پہنچنے میں کتنا وقت لگے گا؟",
+    "quick_msg_3": "🔑 میرے پاس گاڑی کی چابیاں اور کاغذات تیار ہیں۔",
+    "quick_msg_4": "⛽ میں مین پیٹرول پمپ کے قریب کھڑا ہوں۔"
   }
 };
 
