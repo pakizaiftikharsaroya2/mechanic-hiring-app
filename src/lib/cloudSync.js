@@ -1,28 +1,36 @@
 // Universal Cross-Device and Cross-Profile Live Cloud Sync Engine
 // Connects any Google account, computer, or phone in real-time
 
-const GLOBAL_STORE_ID = 'ff8081819ff5b11001a020569502607b';
-const STORE_URL = `https://api.restful-api.dev/objects/${GLOBAL_STORE_ID}`;
 const RELAY_CHANNEL = 'autorescue_pk_sync_dispatch_74c40';
+const RELAY_URL = `https://ntfy.sh/${RELAY_CHANNEL}`;
 
 /**
- * Fetch all shared requests from the global cloud store and merge with local
+ * Fetch all shared requests from the cloud relay and merge with local storage
  */
 export async function fetchAllCloudRequests() {
   try {
-    const res = await fetch(STORE_URL);
-    if (!res.ok) return [];
-    const json = await res.json();
-    const cloudRequests = (json?.data?.requests || []).filter(Boolean);
-
-    // Merge into local storage
+    const res = await fetch(`${RELAY_URL}/json?poll=1&since=24h`);
+    if (!res.ok) return JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+    
+    const text = await res.text();
+    const lines = text.trim().split('\n').filter(Boolean);
     const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
     const map = new Map();
-    
-    // Cloud takes precedence for recent updates
-    cloudRequests.forEach((r) => map.set(r.id, r));
-    local.forEach((r) => {
-      if (!map.has(r.id)) map.set(r.id, r);
+
+    // Seed local
+    local.forEach((r) => map.set(r.id, r));
+
+    // Seed from cloud events
+    lines.forEach((line) => {
+      try {
+        const payload = JSON.parse(line);
+        if (payload && payload.message) {
+          const parsed = typeof payload.message === 'string' ? JSON.parse(payload.message) : payload.message;
+          if (parsed && parsed.type === 'SYNC_REQUEST' && parsed.data) {
+            map.set(parsed.data.id, { ...map.get(parsed.data.id), ...parsed.data });
+          }
+        }
+      } catch (e) {}
     });
 
     const merged = Array.from(map.values()).sort(
@@ -32,19 +40,17 @@ export async function fetchAllCloudRequests() {
     localStorage.setItem('mock_service_requests', JSON.stringify(merged));
     return merged;
   } catch (err) {
-    console.warn('Cloud store fetch error:', err);
     return JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
   }
 }
 
 /**
- * Broadcast request update to global cloud store across all Google profiles & devices
+ * Broadcast request update across all Google profiles & devices
  */
 export async function syncCloudRequest(req) {
   if (!req || !req.id) return;
 
   // 1. Update local storage
-  let merged = [];
   try {
     const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
     const idx = local.findIndex((r) => r.id === req.id);
@@ -54,45 +60,18 @@ export async function syncCloudRequest(req) {
       local.unshift(req);
     }
     localStorage.setItem('mock_service_requests', JSON.stringify(local));
-    merged = local;
   } catch (e) {}
 
-  // 2. Push to global cloud store
+  // 2. Broadcast via Cloud Relay
   try {
-    const res = await fetch(STORE_URL);
-    let existingList = [];
-    if (res.ok) {
-      const json = await res.json();
-      existingList = json?.data?.requests || [];
-    }
-    
-    const idx = existingList.findIndex((r) => r.id === req.id);
-    if (idx >= 0) {
-      existingList[idx] = { ...existingList[idx], ...req };
-    } else {
-      existingList.unshift(req);
-    }
-
-    await fetch(STORE_URL, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'AutoRescue_Requests_Global',
-        data: { requests: existingList },
-      }),
-    });
-  } catch (err) {
-    console.warn('Failed to push to global cloud store:', err);
-  }
-
-  // 3. Trigger SSE broadcast relay
-  try {
-    fetch(`https://ntfy.sh/${RELAY_CHANNEL}`, {
+    await fetch(RELAY_URL, {
       method: 'POST',
       body: JSON.stringify({ type: 'SYNC_REQUEST', data: req }),
       headers: { 'Content-Type': 'application/json' },
-    }).catch(() => {});
-  } catch (e) {}
+    });
+  } catch (err) {
+    console.warn('Cloud broadcast error:', err);
+  }
 }
 
 /**
@@ -113,11 +92,11 @@ export async function syncCloudMessage(msg) {
   } catch (e) {}
 
   try {
-    fetch(`https://ntfy.sh/${RELAY_CHANNEL}`, {
+    await fetch(RELAY_URL, {
       method: 'POST',
       body: JSON.stringify({ type: 'SYNC_MESSAGE', data: msg }),
       headers: { 'Content-Type': 'application/json' },
-    }).catch(() => {});
+    });
   } catch (err) {}
 }
 
@@ -125,12 +104,12 @@ export async function syncCloudMessage(msg) {
  * Subscribe to real-time events across different Google profiles, browsers, and devices
  */
 export function subscribeCloudEvents(onEvent) {
-  // 1. Initial fetch from cloud store
+  // 1. Initial fetch from cloud relay
   fetchAllCloudRequests().then((reqs) => {
     if (onEvent) onEvent({ type: 'SYNC_REQUEST', data: reqs });
   });
 
-  // 2. Poll cloud store every 2.5 seconds for instant multi-profile sync
+  // 2. Poll cloud relay every 2.5 seconds for instant multi-profile sync
   const pollInterval = setInterval(async () => {
     try {
       const reqs = await fetchAllCloudRequests();
@@ -141,12 +120,12 @@ export function subscribeCloudEvents(onEvent) {
   // 3. Realtime SSE listener
   let eventSource = null;
   try {
-    eventSource = new EventSource(`https://ntfy.sh/${RELAY_CHANNEL}/sse`);
+    eventSource = new EventSource(`${RELAY_URL}/sse`);
     eventSource.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
         if (payload && payload.message) {
-          const parsed = JSON.parse(payload.message);
+          const parsed = typeof payload.message === 'string' ? JSON.parse(payload.message) : payload.message;
           if (parsed && parsed.type && parsed.data) {
             if (parsed.type === 'SYNC_REQUEST') {
               const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');

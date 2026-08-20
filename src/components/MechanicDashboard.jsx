@@ -23,6 +23,7 @@ export default function MechanicDashboard() {
   const [showVeriffModal, setShowVeriffModal] = useState(false);
   const [veriffStep, setVeriffStep] = useState(0);
   const [activeJob, setActiveJob] = useState(null);
+  const stopWatchRef = useRef(null);
 
   const activeRequest = (activeJob && !['CANCELLED'].includes(activeJob.status?.toUpperCase()) ? activeJob : null)
     || (activeRequestId && myRequests.find((r) => r.id === activeRequestId && !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase())))
