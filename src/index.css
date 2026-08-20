@@ -473,9 +473,11 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 }
 
 .timeline-step.completed .timeline-bubble {
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  border-color: transparent;
-  color: white;
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 900;
   box-shadow: 0 0 12px var(--primary-glow);
 }
 

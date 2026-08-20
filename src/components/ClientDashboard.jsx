@@ -548,19 +548,25 @@ export default function ClientDashboard() {
               <div className="timeline-stepper">
                 <div className="timeline-progress-line" style={{ width: getStepProgressWidth(statusUpper) }}></div>
                 <div className="timeline-step completed">
-                  <div className="timeline-bubble"></div>
+                  <div className="timeline-bubble">✓</div>
                   <div className="timeline-label">{t('Sent')}</div>
                 </div>
                 <div className={`timeline-step ${['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? 'completed' : 'active'}`}>
-                  <div className="timeline-bubble">2</div>
+                  <div className="timeline-bubble">
+                    {['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? '✓' : '2'}
+                  </div>
                   <div className="timeline-label">{t('Claimed')}</div>
                 </div>
                 <div className={`timeline-step ${['EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? 'completed' : statusUpper === 'ACCEPTED' ? 'active' : ''}`}>
-                  <div className="timeline-bubble">3</div>
+                  <div className="timeline-bubble">
+                    {['EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? '✓' : '3'}
+                  </div>
                   <div className="timeline-label">{t('En Route')}</div>
                 </div>
                 <div className={`timeline-step ${['ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? 'completed' : statusUpper === 'EN_ROUTE' ? 'active' : ''}`}>
-                  <div className="timeline-bubble">4</div>
+                  <div className="timeline-bubble">
+                    {['ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? '✓' : '4'}
+                  </div>
                   <div className="timeline-label">{t('Arrived')}</div>
                 </div>
               </div>
