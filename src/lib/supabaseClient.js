@@ -126,6 +126,7 @@ class MockQueryBuilder {
       }
       // Handle Update
       else if (this._updateData) {
+        const updatedRowsList = [];
         db = db.map(row => {
           let matches = true;
           this._filters.forEach(f => {
@@ -133,6 +134,7 @@ class MockQueryBuilder {
           });
           if (matches) {
             const updatedRow = { ...row, ...this._updateData, updated_at: new Date().toISOString() };
+            updatedRowsList.push(updatedRow);
 
             // Trigger mock realtime channel updates
             setTimeout(() => {
@@ -148,7 +150,7 @@ class MockQueryBuilder {
           return row;
         });
         localStorage.setItem(`mock_${this.table}`, JSON.stringify(db));
-        resultData = this._updateData;
+        resultData = this._isSingle ? (updatedRowsList[0] || null) : updatedRowsList;
       }
       // Handle Queries
       else {

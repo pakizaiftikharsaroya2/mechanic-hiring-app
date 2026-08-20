@@ -107,9 +107,11 @@ export async function acceptRequest(requestId) {
       data: { session },
     } = await supabase.auth.getSession();
 
+    const mechId = session?.user?.id || 'mechanic_muhammad';
+
     const { data, error } = await supabase
       .from('service_requests')
-      .update({ mechanic_id: session?.user?.id, status: 'ACCEPTED' })
+      .update({ mechanic_id: mechId, status: 'ACCEPTED' })
       .eq('id', requestId)
       .select()
       .single();
@@ -120,10 +122,11 @@ export async function acceptRequest(requestId) {
     await supabase
       .from('mechanic_profiles')
       .update({ status: 'BUSY' })
-      .eq('user_id', session?.user?.id);
+      .eq('user_id', mechId);
 
-    if (data) syncCloudRequest(data).catch(() => {});
-    return data;
+    const finalData = data || { id: requestId, mechanic_id: mechId, status: 'ACCEPTED' };
+    await syncCloudRequest(finalData);
+    return finalData;
   }
 
   const {
@@ -163,16 +166,17 @@ export async function updateRequestStatus(requestId, newStatus) {
 
     if (error) throw error;
 
-    // If completed, set mechanic profile status back to ONLINE
-    if (newStatus === 'COMPLETED') {
+    // If completed or cancelled, set mechanic profile status back to ONLINE
+    if (newStatus === 'COMPLETED' || newStatus === 'CANCELLED') {
       await supabase
         .from('mechanic_profiles')
         .update({ status: 'ONLINE' })
-        .eq('user_id', session?.user?.id);
+        .eq('user_id', session?.user?.id || 'mechanic_muhammad');
     }
 
-    if (data) syncCloudRequest(data).catch(() => {});
-    return data;
+    const finalData = data || { id: requestId, status: newStatus };
+    await syncCloudRequest(finalData);
+    return finalData;
   }
 
   const {

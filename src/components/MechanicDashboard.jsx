@@ -25,9 +25,8 @@ export default function MechanicDashboard() {
   const [veriffAnalyzing, setVeriffAnalyzing] = useState(false);
   const stopWatchRef = useRef(null);
 
-  const activeRequest = myRequests.find(
-    (r) => r.id === activeRequestId && !['COMPLETED', 'CANCELLED'].includes(r.status)
-  );
+  const activeRequest = (activeRequestId && myRequests.find((r) => r.id === activeRequestId && !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase())))
+    || myRequests.find((r) => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()));
 
   useEffect(() => {
     if (!user) return;
@@ -104,11 +103,11 @@ export default function MechanicDashboard() {
   const handleAccept = async (reqId) => {
     try {
       const updated = await acceptRequest(reqId);
-      addToast('Job accepted!', 'success');
-      setActiveRequestId(updated.id);
+      addToast('Job accepted! Live GPS Routing started.', 'success');
+      setActiveRequestId(updated?.id || reqId);
       setMechProfile((prev) => (prev ? { ...prev, status: 'BUSY' } : prev));
-      reloadMine();
-      reloadAvailable();
+      await reloadMine();
+      await reloadAvailable();
     } catch (err) {
       addToast(err.message || 'Failed to accept request', 'error');
     }
