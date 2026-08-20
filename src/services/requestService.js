@@ -1,5 +1,5 @@
 import { supabase, isMock } from '../lib/supabaseClient';
-import { syncCloudRequest } from '../lib/cloudSync';
+import { syncCloudRequest, fetchAllCloudRequests } from '../lib/cloudSync';
 
 /**
  * Creates a new service request for the logged-in client.
@@ -37,17 +37,27 @@ export async function createRequest(clientId, requestData) {
 
 /** All requests belonging to the logged-in client, most recent first. */
 export async function fetchClientRequests(clientId) {
+  if (isMock) {
+    try {
+      await fetchAllCloudRequests();
+    } catch (e) {}
+  }
   const { data, error } = await supabase
     .from('service_requests')
     .select('*')
-    .eq('client_id', clientId)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return data;
+  if (!clientId) return data || [];
+  return (data || []).filter(r => r.client_id === clientId || !r.client_id);
 }
 
 /** Requests still open for any online mechanic to see (RLS filters to PENDING only). */
 export async function fetchAvailableRequests() {
+  if (isMock) {
+    try {
+      await fetchAllCloudRequests();
+    } catch (e) {}
+  }
   const { data, error } = await supabase
     .from('service_requests')
     .select('*')
@@ -61,13 +71,18 @@ export async function fetchAvailableRequests() {
 
 /** Requests currently assigned to the logged-in mechanic (active + history). */
 export async function fetchMechanicRequests(mechanicId) {
+  if (isMock) {
+    try {
+      await fetchAllCloudRequests();
+    } catch (e) {}
+  }
   const { data, error } = await supabase
     .from('service_requests')
     .select('*')
-    .eq('mechanic_id', mechanicId)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return data;
+  if (!mechanicId) return [];
+  return (data || []).filter(r => r.mechanic_id === mechanicId);
 }
 
 export async function fetchRequestById(requestId) {
