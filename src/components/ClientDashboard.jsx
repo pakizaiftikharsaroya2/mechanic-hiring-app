@@ -204,39 +204,16 @@ export default function ClientDashboard() {
 
   return (
     <div className="fade-in" style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem', width: '100%', flexGrow: 1 }}>
-      <header style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+      <header style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
         <div>
           <h2 style={{ fontSize: '1.6rem', fontWeight: 800 }}>{t('client_console_title')}</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
             {t('client_console_sub')}
           </p>
         </div>
-        {activeRequest && activeRequestId !== 'NEW_FORM' && (
-          <button
-            type="button"
-            onClick={() => setActiveRequestId('NEW_FORM')}
-            className="btn btn-outline"
-            style={{ fontSize: '0.8rem', padding: '0.45rem 0.95rem' }}
-          >
-            + {t('req_emergency_assistance')}
-          </button>
-        )}
-        {activeRequestId === 'NEW_FORM' && (
-          <button
-            type="button"
-            onClick={() => {
-              const ongoing = requests.find(r => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()));
-              if (ongoing) setActiveRequestId(ongoing.id);
-            }}
-            className="btn btn-primary"
-            style={{ fontSize: '0.8rem', padding: '0.45rem 0.95rem' }}
-          >
-            ← {t('live_tracking_map')}
-          </button>
-        )}
       </header>
 
-      {!activeRequest || activeRequestId === 'NEW_FORM' ? (
+      {!activeRequest ? (
         <div className="dashboard-grid">
           <div className="glass-panel" style={{ padding: '2rem', background: 'var(--bg-card)' }}>
             <h3 style={{ marginBottom: '1.5rem', fontSize: '1.15rem', fontWeight: 800, borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
