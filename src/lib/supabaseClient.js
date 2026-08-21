@@ -239,27 +239,7 @@ class MockSupabaseClient {
     }
 
     if (!localStorage.getItem('mock_service_requests')) {
-      const initialRequests = [
-        {
-          id: 'req_demo1',
-          client_id: 'usr_client1',
-          vehicle_make: 'Toyota',
-          vehicle_model: 'Corolla Altis',
-          vehicle_color: 'Silver',
-          breakdown_type: 'Flat Tire',
-          service_type: 'Tire Change',
-          description: 'Flat tire near Liberty Roundabout. Have a spare but no jack.',
-          latitude: 31.5104,
-          longitude: 74.3487,
-          location_text: 'Liberty Roundabout, Gulberg, Lahore',
-          budget: 2500,
-          payment_method: 'JazzCash',
-          status: 'PENDING',
-          created_at: new Date(Date.now() - 360000).toISOString(),
-          updated_at: new Date(Date.now() - 360000).toISOString()
-        }
-      ];
-      localStorage.setItem('mock_service_requests', JSON.stringify(initialRequests));
+      localStorage.setItem('mock_service_requests', JSON.stringify([]));
     }
 
     if (!localStorage.getItem('mock_users')) {

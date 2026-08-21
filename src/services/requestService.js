@@ -40,9 +40,9 @@ export async function createRequest(clientId, requestData) {
 /** All requests belonging to the logged-in client, most recent first. */
 export async function fetchClientRequests(clientId) {
   if (isMock) {
-    try {
-      await fetchAllCloudRequests();
-    } catch (e) {}
+    const all = await fetchAllCloudRequests();
+    if (!clientId) return all || [];
+    return (all || []).filter((r) => String(r.client_id) === String(clientId));
   }
   const { data, error } = await supabase
     .from('service_requests')
@@ -56,9 +56,11 @@ export async function fetchClientRequests(clientId) {
 /** Requests still open for any online mechanic to see (RLS filters to PENDING only). */
 export async function fetchAvailableRequests() {
   if (isMock) {
-    try {
-      await fetchAllCloudRequests();
-    } catch (e) {}
+    const all = await fetchAllCloudRequests();
+    return (all || []).filter((r) => {
+      const s = String(r.status || 'PENDING').toUpperCase();
+      return s === 'PENDING' && !r.mechanic_id;
+    });
   }
   const { data, error } = await supabase
     .from('service_requests')
@@ -74,9 +76,9 @@ export async function fetchAvailableRequests() {
 /** Requests currently assigned to the logged-in mechanic (active + history). */
 export async function fetchMechanicRequests(mechanicId) {
   if (isMock) {
-    try {
-      await fetchAllCloudRequests();
-    } catch (e) {}
+    const all = await fetchAllCloudRequests();
+    if (!mechanicId) return [];
+    return (all || []).filter((r) => String(r.mechanic_id) === String(mechanicId));
   }
   const { data, error } = await supabase
     .from('service_requests')
