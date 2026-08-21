@@ -803,8 +803,8 @@ export default function ClientDashboard() {
                         <span style={{ fontWeight: 800, display: 'block', color: 'var(--text-main)' }}>
                           {mechanicProfile?.name || activeRequest.mechanic_name || 'Ustad Muhammad (AutoRescue Verified)'}
                         </span>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                          {mechanicProfile?.phone || '0302-8877665'} • AutoRescue Verified ⭐ 4.9
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {activeRequest.mechanic_phone || mechanicProfile?.phone || '0300-1234567'} • AutoRescue Verified ⭐ 4.9
                         </span>
                       </div>
                     </div>
@@ -850,6 +850,25 @@ export default function ClientDashboard() {
                   }}>
                     <span className="pulse-indicator" style={{ background: '#ea580c' }}></span>
                     🔧 Mechanic is actively working on your vehicle at your location!
+                  </div>
+                )}
+                {statusUpper === 'COMPLETED' && (
+                  <div style={{
+                    background: 'rgba(16, 185, 129, 0.12)',
+                    border: '1.5px solid #10b981',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '0.85rem 1rem',
+                    color: '#047857',
+                    fontSize: '0.9rem',
+                    fontWeight: 800,
+                    textAlign: 'center',
+                    marginBottom: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}>
+                    🎉 {t('job_completed_success') || 'Job Completed! Thank you for using AutoRescue.'}
                   </div>
                 )}
 

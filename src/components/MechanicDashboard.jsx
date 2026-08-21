@@ -197,12 +197,17 @@ export default function MechanicDashboard() {
       const reqId = activeRequest?.id || activeRequestId;
       const updated = await updateRequestStatus(reqId, newStatus);
       addToast(`Status updated to ${newStatus.replace('_', ' ')}`, 'success');
-      setActiveJob((prev) => (prev ? { ...prev, ...updated, status: newStatus } : updated));
+      
+      if (newStatus === 'COMPLETED' || newStatus === 'CANCELLED') {
+        setActiveJob(null);
+        setActiveRequestId(null);
+        setMechProfile((prev) => (prev ? { ...prev, status: 'ONLINE' } : prev));
+      } else {
+        setActiveJob((prev) => (prev ? { ...prev, ...updated, status: newStatus } : updated));
+      }
+
       await reloadMine();
       await reloadAvailable();
-      if (newStatus === 'COMPLETED' || newStatus === 'CANCELLED') {
-        setMechProfile((prev) => (prev ? { ...prev, status: 'ONLINE' } : prev));
-      }
     } catch (err) {
       addToast(err.message || 'Failed to update status', 'error');
     }
