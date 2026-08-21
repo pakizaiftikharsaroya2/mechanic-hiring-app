@@ -51,8 +51,26 @@ export default async function handler(req, res) {
       } else {
         globalRequests.unshift(item);
       }
-    } else if (Array.isArray(body.requests)) {
-      globalRequests = body.requests;
+    }
+
+    if (Array.isArray(body.requests) && body.requests.length > 0) {
+      body.requests.forEach(reqItem => {
+        const idx = globalRequests.findIndex(r => String(r.id) === String(reqItem.id));
+        if (idx >= 0) {
+          const existing = globalRequests[idx];
+          const existStat = String(existing?.status || 'PENDING').toUpperCase();
+          const incStat = String(reqItem?.status || 'PENDING').toUpperCase();
+          if (existStat === 'CANCELLED' && incStat !== 'CANCELLED') {
+            // preserve
+          } else if (existStat === 'COMPLETED' && incStat !== 'COMPLETED' && incStat !== 'CANCELLED') {
+            // preserve
+          } else {
+            globalRequests[idx] = { ...existing, ...reqItem };
+          }
+        } else {
+          globalRequests.push(reqItem);
+        }
+      });
     }
 
     if (body.type === 'SYNC_MESSAGE' && body.data) {

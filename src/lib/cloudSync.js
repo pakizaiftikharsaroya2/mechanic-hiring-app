@@ -209,7 +209,7 @@ export function subscribeCloudEvents(onEvent) {
     window.addEventListener('storage', handleStorage);
   }
 
-  // 4. Fast 500ms Serverless Polling Loop
+  // 4. Fast 250ms Serverless Polling Loop for instantaneous cross-device reactions
   const pollInterval = setInterval(async () => {
     try {
       const cloudReqs = await fetchAllCloudRequests();
@@ -217,7 +217,7 @@ export function subscribeCloudEvents(onEvent) {
         onEvent({ type: 'SYNC_REQUEST', data: cloudReqs });
       }
     } catch (e) {}
-  }, 500);
+  }, 250);
 
   return () => {
     channel?.removeEventListener('message', handleBcMessage);
