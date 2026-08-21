@@ -40,9 +40,15 @@ export async function createRequest(clientId, requestData) {
 /** All requests belonging to the logged-in client, most recent first. */
 export async function fetchClientRequests(clientId) {
   if (!clientId) return [];
+  const tombstones = new Set(JSON.parse(localStorage.getItem('autorescue_tombstoned_ids') || '[]'));
+  const lastClearedAt = Number(localStorage.getItem('autorescue_last_cleared_at') || 0);
+  const isAlive = (r) =>
+    !tombstones.has(String(r.id)) &&
+    new Date(r.created_at || 0).getTime() >= lastClearedAt;
+
   if (isMock) {
     const all = await fetchAllCloudRequests();
-    return (all || []).filter((r) => String(r.client_id) === String(clientId));
+    return (all || []).filter((r) => String(r.client_id) === String(clientId) && isAlive(r));
   }
   const { data, error } = await supabase
     .from('service_requests')
@@ -50,7 +56,7 @@ export async function fetchClientRequests(clientId) {
     .eq('client_id', clientId)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return data || [];
+  return (data || []).filter(isAlive);
 }
 
 /** Requests still open for any online mechanic to see (RLS filters to PENDING only). */
@@ -315,13 +321,21 @@ export function subscribeToAvailableRequests(onInsert) {
   return () => supabase.removeChannel(channel);
 }
 
-/** Wipe all request history completely from local storage, broadcast channels, and server */
+/** Wipe all request history completely. Tombstones all known IDs so polling can NEVER re-inject them. */
 export async function clearRequestHistory() {
   const now = Date.now();
+  
+  // 1. Tombstone every existing request ID
+  const existing = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+  const existingIds = existing.map(r => String(r.id)).filter(Boolean);
+  const currentTombstones = JSON.parse(localStorage.getItem('autorescue_tombstoned_ids') || '[]');
+  const allTombstones = [...new Set([...currentTombstones, ...existingIds])];
+  localStorage.setItem('autorescue_tombstoned_ids', JSON.stringify(allTombstones));
   localStorage.setItem('autorescue_last_cleared_at', String(now));
   localStorage.setItem('mock_service_requests', JSON.stringify([]));
   localStorage.setItem('mock_messages', JSON.stringify([]));
   
+  // 2. Wipe server-side state
   try {
     const API_URL = typeof window !== 'undefined' ? `${window.location.origin}/api/sync` : '/api/sync';
     await fetch(API_URL, {
@@ -331,11 +345,13 @@ export async function clearRequestHistory() {
     });
   } catch (e) {}
 
+  // 3. Broadcast wipe to all open tabs/windows
   if (typeof window !== 'undefined') {
     if (window.BroadcastChannel) {
       try {
         const bc = new BroadcastChannel('autorescue_native_sync_v9');
         bc.postMessage({ type: 'SYNC_REQUEST', data: [] });
+        bc.postMessage({ type: 'CLEAR_ALL', cleared_at: now });
       } catch (e) {}
     }
     window.dispatchEvent(new Event('storage'));

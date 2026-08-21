@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useClientRequests } from '../hooks/useRequests';
 import { createRequest, cancelRequest, clearRequestHistory, acceptMechanicOffer } from '../services/requestService';
+import { syncCloudRequest } from '../lib/cloudSync';
 import { getBrowserLocation, subscribeToMechanicLocation } from '../services/locationService';
 import { reverseGeocode } from '../services/routingService';
 import { fetchProfile } from '../services/authService';

@@ -62,18 +62,20 @@ function isValidRequest(req) {
  */
 export async function fetchAllCloudRequests() {
   const lastClearedAt = Number(localStorage.getItem('autorescue_last_cleared_at') || 0);
+  const tombstones = new Set(JSON.parse(localStorage.getItem('autorescue_tombstoned_ids') || '[]'));
+
+  const isAlive = (r) =>
+    isValidRequest(r) &&
+    !tombstones.has(String(r.id)) &&
+    new Date(r.created_at || 0).getTime() >= lastClearedAt;
 
   try {
     const res = await fetch(API_URL);
     if (res.ok) {
       const json = await res.json();
       if (Array.isArray(json?.requests)) {
-        const validList = json.requests
-          .filter(isValidRequest)
-          .filter(r => new Date(r.created_at || 0).getTime() >= lastClearedAt);
-        let local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]')
-          .filter(isValidRequest)
-          .filter(r => new Date(r.created_at || 0).getTime() >= lastClearedAt);
+        const validList = json.requests.filter(isAlive);
+        let local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]').filter(isAlive);
         
         validList.forEach((req) => {
           const idx = local.findIndex((r) => String(r.id) === String(req.id));
@@ -90,9 +92,7 @@ export async function fetchAllCloudRequests() {
     }
   } catch (err) {}
 
-  return JSON.parse(localStorage.getItem('mock_service_requests') || '[]')
-    .filter(isValidRequest)
-    .filter(r => new Date(r.created_at || 0).getTime() >= lastClearedAt);
+  return JSON.parse(localStorage.getItem('mock_service_requests') || '[]').filter(isAlive);
 }
 
 /**
@@ -198,9 +198,18 @@ export function subscribeCloudEvents(onEvent) {
 
   // 2. BroadcastChannel listener (0ms same-machine sync)
   const handleBcMessage = (event) => {
-    if (event.data && event.data.type === 'SYNC_REQUESTS' && onEvent) {
+    if (!event.data) return;
+    if (event.data.type === 'CLEAR_ALL') {
+      // Another tab cleared history — wipe local state immediately
+      localStorage.setItem('mock_service_requests', JSON.stringify([]));
+      localStorage.setItem('mock_messages', JSON.stringify([]));
+      if (event.data.cleared_at) {
+        localStorage.setItem('autorescue_last_cleared_at', String(event.data.cleared_at));
+      }
+      if (onEvent) onEvent({ type: 'SYNC_REQUEST', data: [] });
+    } else if (event.data.type === 'SYNC_REQUESTS' && onEvent) {
       onEvent({ type: 'SYNC_REQUEST', data: event.data.data });
-    } else if (event.data && event.data.type === 'SYNC_MESSAGE' && onEvent) {
+    } else if (event.data.type === 'SYNC_MESSAGE' && onEvent) {
       onEvent(event.data);
     }
   };

@@ -30,7 +30,7 @@ export function useClientRequests(clientId) {
     reload();
     // Cross-tab & multi-window instant sync
     const handleStorage = (e) => {
-      if (!e.key || e.key.includes('service_requests')) reload();
+      if (!e.key || e.key.includes('service_requests') || e.key.includes('autorescue_')) reload();
     };
     window.addEventListener('storage', handleStorage);
     const interval = setInterval(reload, 400);
@@ -39,7 +39,16 @@ export function useClientRequests(clientId) {
     const unsubCloud = subscribeCloudEvents((event) => {
       if (event.type === 'SYNC_REQUEST') {
         if (Array.isArray(event.data)) {
-          const filtered = clientId ? event.data.filter(r => String(r.client_id) === String(clientId)) : [];
+          const tombstones = new Set(JSON.parse(localStorage.getItem('autorescue_tombstoned_ids') || '[]'));
+          const lastClearedAt = Number(localStorage.getItem('autorescue_last_cleared_at') || 0);
+          const filtered = event.data.filter(r =>
+            clientId
+              ? String(r.client_id) === String(clientId)
+              : false
+          ).filter(r =>
+            !tombstones.has(String(r.id)) &&
+            new Date(r.created_at || 0).getTime() >= lastClearedAt
+          );
           setRequests(filtered);
         }
         reload();
