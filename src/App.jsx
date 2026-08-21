@@ -20,6 +20,7 @@ function Header() {
   const location = useLocation();
 
   const isHome = location.pathname === '/';
+  const firstName = profile?.name ? profile.name.split(' ')[0] : (user?.email?.split('@')[0] || 'User');
   const pendingJobsCount = role === 'MECHANIC'
     ? (availableRequests || []).filter(r => (!r.mechanic_id || r.mechanic_id === null) && String(r.status || 'PENDING').toUpperCase() === 'PENDING').length
     : 0;
