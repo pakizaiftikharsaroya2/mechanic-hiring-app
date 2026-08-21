@@ -99,6 +99,27 @@ export default function ClientDashboard() {
     }
   }, [requests, dismissedReviewIds, showReviewModal]);
 
+  const resetRequestForm = () => {
+    setVehicleMake('');
+    setCustomVehicleMake('');
+    setVehicleModel('');
+    setVehicleColor('');
+    setBreakdownType('Flat Tire');
+    setCustomBreakdownType('');
+    setServiceType('On-site Repair');
+    setIsAccident(false);
+    setTowDestinationType('COMPANY_3S');
+    setCustomTowDestination('');
+    setLocationText('');
+    setCoords(null);
+    setDescription('');
+    setBudget('4000');
+    setPaymentMethod('Cash');
+    setShowCancelModal(false);
+    setCancelReason('');
+    setOtherReasonText('');
+  };
+
   const hasUserDismissedRef = React.useRef(false);
 
   // Automatically keep ongoing active request open on initial load unless dismissed
@@ -107,10 +128,14 @@ export default function ClientDashboard() {
     const latestActive = requests.find(r => !['CANCELLED'].includes(r.status?.toUpperCase()));
     if (latestActive) {
       setActiveRequestId(latestActive.id);
+      if (latestActive.status?.toUpperCase() === 'COMPLETED') {
+        resetRequestForm();
+      }
     }
   }, [requests, activeRequestId]);
 
   const handleDismissActiveRequest = () => {
+    resetRequestForm();
     hasUserDismissedRef.current = true;
     setActiveRequestId(null);
   };
@@ -241,12 +266,7 @@ export default function ClientDashboard() {
         clientName: profile?.name || user?.name || user?.email?.split('@')[0] || 'Client User',
         clientPhone: profile?.phone || user?.phone || '0300-1234567',
       });
-      setVehicleModel('');
-      setDescription('');
-      setIsAccident(false);
-      setCustomVehicleMake('');
-      setCustomBreakdown('');
-      setDestinationNote('');
+      resetRequestForm();
       addToast('Request broadcast successfully! Waiting for a mechanic...', 'success');
       setActiveRequestId(created.id);
       await reload();
@@ -1383,10 +1403,14 @@ export default function ClientDashboard() {
                   });
                   setReviewSubmitted(true);
                   setShowReviewModal(false);
+                  resetRequestForm();
+                  setActiveRequestId(null);
                   addToast(`Review submitted with ${rating} Stars! Thank you for rating your mechanic.`, 'success');
                   await reload();
                 } catch (e) {
                   addToast('Review submitted locally.', 'info');
+                  resetRequestForm();
+                  setActiveRequestId(null);
                   setShowReviewModal(false);
                 }
               }}
