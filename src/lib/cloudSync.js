@@ -18,11 +18,22 @@ export function mergeRequest(existingReq, newReq) {
   if (!existingReq) return newReq;
   if (!newReq) return existingReq;
 
-  const curRank = STATUS_RANK[String(existingReq.status || 'PENDING').toUpperCase()] || 0;
-  const newRank = STATUS_RANK[String(newReq.status || 'PENDING').toUpperCase()] || 0;
+  const existStat = String(existingReq.status || 'PENDING').toUpperCase();
+  const incStat = String(newReq.status || 'PENDING').toUpperCase();
 
-  // Monotonic: Never downgrade status unless cancelled
-  const effectiveStatus = (newRank >= curRank || newReq.status?.toUpperCase() === 'CANCELLED')
+  // 1. TERMINAL STATE LOCK: Once CANCELLED or COMPLETED, it is permanent and can never re-open
+  if (existStat === 'CANCELLED' && incStat !== 'CANCELLED') {
+    return existingReq;
+  }
+  if (existStat === 'COMPLETED' && incStat !== 'COMPLETED' && incStat !== 'CANCELLED') {
+    return existingReq;
+  }
+
+  const curRank = STATUS_RANK[existStat] || 0;
+  const newRank = STATUS_RANK[incStat] || 0;
+
+  // Monotonic: Never downgrade status
+  const effectiveStatus = (newRank >= curRank || incStat === 'CANCELLED' || incStat === 'COMPLETED')
     ? newReq.status
     : existingReq.status;
 

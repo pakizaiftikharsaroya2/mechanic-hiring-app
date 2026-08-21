@@ -95,22 +95,27 @@ export default function MechanicDashboard() {
   }, [activeRequest?.id, user?.id]);
 
   const toggleOnline = async () => {
-    if (!mechProfile) return;
-    const nextStatus = mechProfile.status === 'ONLINE' ? 'OFFLINE' : 'ONLINE';
+    const currentStatus = mechProfile?.status === 'ONLINE' ? 'ONLINE' : 'OFFLINE';
+    const nextStatus = currentStatus === 'ONLINE' ? 'OFFLINE' : 'ONLINE';
+    // Instant optimistic update
+    setMechProfile((prev) => (prev ? { ...prev, status: nextStatus } : { status: nextStatus }));
+    addToast(`You are now ${nextStatus}`, 'success');
+
     try {
       if (nextStatus === 'ONLINE') {
         try {
           const pos = await getBrowserLocation();
-          await updateMechanicLocation(user.id, pos);
+          updateMechanicLocation(user?.id, pos).catch(() => {});
         } catch {
-          /* location optional at this point */
+          /* location optional */
         }
       }
-      const updated = await setMechanicStatus(user.id, nextStatus);
-      setMechProfile((prev) => ({ ...prev, ...updated }));
-      addToast(`You are now ${nextStatus}`, 'success');
+      if (user?.id) {
+        await setMechanicStatus(user.id, nextStatus);
+      }
       reloadAvailable();
     } catch (err) {
+      setMechProfile((prev) => (prev ? { ...prev, status: currentStatus } : { status: currentStatus }));
       addToast(err.message || 'Failed to update status', 'error');
     }
   };
@@ -128,6 +133,12 @@ export default function MechanicDashboard() {
 
   const handleAccept = async (reqId) => {
     try {
+      // Instant optimistic state transition
+      setActiveRequestId(reqId);
+      setActiveJob({ id: reqId, status: 'ACCEPTED' });
+      setMechProfile((prev) => (prev ? { ...prev, status: 'BUSY' } : prev));
+      addToast('Job accepted! Live GPS Routing started.', 'success');
+
       const updated = await acceptRequest(reqId, {
         user_id: user?.id,
         name: profile?.name || user?.name || user?.email?.split('@')[0] || 'Mechanic Muhammad',
@@ -135,13 +146,11 @@ export default function MechanicDashboard() {
         latitude: myPosition?.latitude || mechProfile?.latitude || 31.5204,
         longitude: myPosition?.longitude || mechProfile?.longitude || 74.3587
       });
-      addToast('Job accepted! Live GPS Routing started.', 'success');
       const finalId = updated?.id || reqId;
       setActiveRequestId(finalId);
       setActiveJob(updated || { id: reqId, status: 'ACCEPTED' });
-      setMechProfile((prev) => (prev ? { ...prev, status: 'BUSY' } : prev));
-      await reloadMine();
-      await reloadAvailable();
+      reloadMine();
+      reloadAvailable();
     } catch (err) {
       addToast(err.message || 'Failed to accept request', 'error');
     }
@@ -201,21 +210,26 @@ export default function MechanicDashboard() {
   };
 
   const handleStatusChange = async (newStatus) => {
-    try {
-      const reqId = activeRequest?.id || activeRequestId;
-      const updated = await updateRequestStatus(reqId, newStatus);
-      addToast(`Status updated to ${newStatus.replace('_', ' ')}`, 'success');
-      
-      if (newStatus === 'COMPLETED' || newStatus === 'CANCELLED') {
-        setActiveJob(null);
-        setActiveRequestId(null);
-        setMechProfile((prev) => (prev ? { ...prev, status: 'ONLINE' } : prev));
-      } else {
-        setActiveJob((prev) => (prev ? { ...prev, ...updated, status: newStatus } : updated));
-      }
+    const reqId = activeRequest?.id || activeRequestId;
+    if (!reqId) return;
 
-      await reloadMine();
-      await reloadAvailable();
+    // Instant UI reaction
+    addToast(`Status updated to ${newStatus.replace('_', ' ')}`, 'success');
+    if (newStatus === 'COMPLETED' || newStatus === 'CANCELLED') {
+      setActiveJob(null);
+      setActiveRequestId(null);
+      setMechProfile((prev) => (prev ? { ...prev, status: 'ONLINE' } : prev));
+    } else {
+      setActiveJob((prev) => (prev ? { ...prev, status: newStatus } : { id: reqId, status: newStatus }));
+    }
+
+    try {
+      const updated = await updateRequestStatus(reqId, newStatus);
+      if (newStatus !== 'COMPLETED' && newStatus !== 'CANCELLED' && updated) {
+        setActiveJob(updated);
+      }
+      reloadMine();
+      reloadAvailable();
     } catch (err) {
       addToast(err.message || 'Failed to update status', 'error');
     }

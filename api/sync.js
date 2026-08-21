@@ -36,7 +36,18 @@ export default async function handler(req, res) {
       const item = body.data;
       const idx = globalRequests.findIndex(r => String(r.id) === String(item.id));
       if (idx >= 0) {
-        globalRequests[idx] = { ...globalRequests[idx], ...item };
+        const existing = globalRequests[idx];
+        const existStat = String(existing?.status || 'PENDING').toUpperCase();
+        const incStat = String(item?.status || 'PENDING').toUpperCase();
+
+        // Terminal state lock: Never let a cancelled/completed job be revived by a stale packet
+        if (existStat === 'CANCELLED' && incStat !== 'CANCELLED') {
+          // preserve CANCELLED
+        } else if (existStat === 'COMPLETED' && incStat !== 'COMPLETED' && incStat !== 'CANCELLED') {
+          // preserve COMPLETED
+        } else {
+          globalRequests[idx] = { ...existing, ...item };
+        }
       } else {
         globalRequests.unshift(item);
       }

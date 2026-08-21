@@ -32,7 +32,17 @@ const localApiPlugin = () => ({
               if (parsed.type === 'SYNC_REQUEST' && parsed.data) {
                 const idx = devRequests.findIndex(r => String(r.id) === String(parsed.data.id));
                 if (idx >= 0) {
-                  devRequests[idx] = { ...devRequests[idx], ...parsed.data };
+                  const existing = devRequests[idx];
+                  const existStat = String(existing?.status || 'PENDING').toUpperCase();
+                  const incStat = String(parsed.data?.status || 'PENDING').toUpperCase();
+
+                  if (existStat === 'CANCELLED' && incStat !== 'CANCELLED') {
+                    // preserve CANCELLED
+                  } else if (existStat === 'COMPLETED' && incStat !== 'COMPLETED' && incStat !== 'CANCELLED') {
+                    // preserve COMPLETED
+                  } else {
+                    devRequests[idx] = { ...existing, ...parsed.data };
+                  }
                 } else {
                   devRequests.unshift(parsed.data);
                 }
