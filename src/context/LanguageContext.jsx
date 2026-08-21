@@ -431,6 +431,9 @@ const translations = {
     "mech_quick_msg_2": "📍 I have arrived at your breakdown spot. Please turn on hazard lights.",
     "mech_quick_msg_3": "📞 I am calling your phone to locate your exact vehicle.",
     "mech_quick_msg_4": "🔧 Tools and diagnostic equipment ready for inspection.",
+    "request_again": "Request Again",
+    "Request Cancelled": "Request Cancelled",
+    "This request was cancelled. You can request again with the same vehicle & location details.": "This request was cancelled. You can request again with the same vehicle & location details.",
     
     // Mechanic Dispatch Console
     "incoming_requests": "Incoming Requests",
@@ -869,6 +872,9 @@ const translations = {
     "mech_quick_msg_2": "📍 میں آپ کے پاس پہنچ چکا ہوں۔ برائے مہربانی گاڑی کی لائٹس آن کر لیں۔",
     "mech_quick_msg_3": "📞 میں درست جگہ معلوم کرنے کے لیے آپ کے نمبر پر کال کر رہا ہوں۔",
     "mech_quick_msg_4": "🔧 تمام ضروری اوزار اور سامان گاڑی چیک کرنے کے لیے تیار ہیں۔",
+    "request_again": "دوبارہ درخواست کریں",
+    "Request Cancelled": "درخواست منسوخ کر دی گئی ہے",
+    "This request was cancelled. You can request again with the same vehicle & location details.": "یہ درخواست منسوخ ہو چکی ہے۔ آپ اسی گاڑی اور لوکیشن کے ساتھ دوبارہ درخواست بھیج سکتے ہیں۔",
 
     // Mechanic Dispatch Console
     "incoming_requests": "موصول شدہ درخواستیں",

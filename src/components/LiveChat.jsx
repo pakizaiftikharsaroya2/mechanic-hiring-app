@@ -15,26 +15,26 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName, rol
 
   const isMechanic = role === 'mechanic';
 
-  const loadMessages = useCallback(async () => {
+  const loadMessages = useCallback(async (isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       const data = await fetchMessages(requestId);
-      setMessages(data);
+      setMessages(data || []);
       setError(null);
     } catch (err) {
-      setError(err.message || 'Failed to load messages');
+      if (isInitial) setError(err.message || 'Failed to load messages');
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   }, [requestId]);
 
   useEffect(() => {
-    loadMessages();
+    loadMessages(true);
     const handleStorage = (e) => {
-      if (!e.key || e.key.includes('messages')) loadMessages();
+      if (!e.key || e.key.includes('messages')) loadMessages(false);
     };
     window.addEventListener('storage', handleStorage);
-    const interval = setInterval(loadMessages, 2500);
+    const interval = setInterval(() => loadMessages(false), 3000);
     return () => {
       window.removeEventListener('storage', handleStorage);
       clearInterval(interval);

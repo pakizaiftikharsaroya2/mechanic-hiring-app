@@ -119,6 +119,28 @@ export default function ClientDashboard() {
     }
   };
 
+  const handleReRequest = (req) => {
+    if (!req) return;
+    setVehicleMake(req.vehicle_make || 'Toyota');
+    setVehicleModel(req.vehicle_model || '');
+    setVehicleColor(req.vehicle_color || '');
+    setBreakdownType(req.breakdown_type ? (req.breakdown_type.startsWith('Other:') ? 'Other Mechanical' : req.breakdown_type) : 'Engine');
+    if (req.breakdown_type && req.breakdown_type.startsWith('Other:')) {
+      setCustomBreakdownType(req.breakdown_type.replace('Other:', '').trim());
+    }
+    setServiceType(req.service_type || 'On-site Repair');
+    setLocationText(req.location_text || '');
+    setBudget(req.budget ? String(req.budget) : '');
+    setPaymentMethod(req.payment_method || 'Cash');
+    setDescription(req.description && req.description !== 'No additional details provided.' ? req.description : '');
+    if (req.latitude && req.longitude) {
+      setCoords({ latitude: Number(req.latitude), longitude: Number(req.longitude) });
+    }
+    setActiveRequestId(null);
+    addToast('Previous request details loaded. Review & broadcast your new request.', 'success');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!vehicleMake || !vehicleModel || !locationText || !budget) {
@@ -519,42 +541,70 @@ export default function ClientDashboard() {
                   {t('no_requests_yet')}
                 </div>
               ) : (
-                requests.map((req) => (
-                  <div
-                    key={req.id}
-                    className="glass-panel"
-                    style={{
-                      padding: '1.25rem',
-                      cursor: 'pointer',
-                      background: 'var(--bg-card)',
-                      borderColor: req.id === activeRequestId ? 'var(--secondary)' : 'var(--border-color)',
-                      borderWidth: req.id === activeRequestId ? '2px' : '1px',
-                    }}
-                    onClick={() => setActiveRequestId(req.id)}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                      <div>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--secondary)', fontWeight: 800, textTransform: 'uppercase' }}>
-                          {t(req.breakdown_type)} • {t(req.service_type)}
-                        </span>
-                        <h4 style={{ fontSize: '1.05rem', marginTop: '0.15rem' }}>
-                          {t(req.vehicle_make)} {req.vehicle_model} ({t(req.vehicle_color)})
-                        </h4>
+                requests.map((req) => {
+                  const isCancelled = req.status?.toUpperCase() === 'CANCELLED';
+                  return (
+                    <div
+                      key={req.id}
+                      className="glass-panel"
+                      style={{
+                        padding: '1.25rem',
+                        cursor: isCancelled ? 'default' : 'pointer',
+                        background: 'var(--bg-card)',
+                        borderColor: req.id === activeRequestId ? 'var(--secondary)' : 'var(--border-color)',
+                        borderWidth: req.id === activeRequestId ? '2px' : '1px',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onClick={() => {
+                        if (!isCancelled) {
+                          setActiveRequestId(req.id);
+                        }
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                        <div>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--secondary)', fontWeight: 800, textTransform: 'uppercase' }}>
+                            {t(req.breakdown_type)} • {t(req.service_type)}
+                          </span>
+                          <h4 style={{ fontSize: '1.05rem', marginTop: '0.15rem' }}>
+                            {t(req.vehicle_make)} {req.vehicle_model} ({t(req.vehicle_color)})
+                          </h4>
+                        </div>
+                        <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>{formatPKR(req.budget)}</span>
                       </div>
-                      <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>{formatPKR(req.budget)}</span>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                        "{req.description === 'No additional details provided.' ? t('No additional details provided.') : req.description}"
+                      </p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem' }}>
+                        <span>{req.location_text}</span>
+                        <span className={isCancelled ? 'badge-role' : 'badge-role badge-client'} style={isCancelled ? { color: 'var(--error)', borderColor: 'var(--error)', background: 'rgba(239, 68, 68, 0.08)' } : undefined}>
+                          {t(req.status)}
+                        </span>
+                      </div>
+
+                      {isCancelled && (
+                        <div style={{ marginTop: '0.75rem', paddingTop: '0.5rem', borderTop: '1px dashed var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{t('Request Cancelled')}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReRequest(req);
+                            }}
+                            className="btn btn-primary"
+                            style={{ padding: '0.35rem 0.85rem', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            🔄 {t('request_again')}
+                          </button>
+                        </div>
+                      )}
+
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                        {t('pay_via')} <strong>{t(req.payment_method)}</strong>
+                      </div>
                     </div>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                      "{req.description === 'No additional details provided.' ? t('No additional details provided.') : req.description}"
-                    </p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem' }}>
-                      <span>{req.location_text}</span>
-                      <span className="badge-role badge-client">{t(req.status)}</span>
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                      {t('pay_via')} <strong>{t(req.payment_method)}</strong>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -562,6 +612,46 @@ export default function ClientDashboard() {
       ) : (
         <div className="dashboard-grid">
           <div className="glass-panel" style={{ padding: '1.5rem', background: 'var(--bg-card)', height: '100%', minHeight: '520px', display: 'flex', flexDirection: 'column' }}>
+            {statusUpper === 'CANCELLED' && (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1.5px solid var(--error)',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.85rem 1rem',
+                marginBottom: '1rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '0.5rem'
+              }}>
+                <div>
+                  <strong style={{ color: 'var(--error)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>⚠️</span> {t('Request Cancelled')}
+                  </strong>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                    {t('This request was cancelled. You can request again with the same vehicle & location details.')}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    onClick={() => setActiveRequestId(null)}
+                    className="btn btn-outline"
+                    style={{ padding: '0.4rem 0.75rem', fontSize: '0.75rem' }}
+                  >
+                    {t('back_to_dashboard')}
+                  </button>
+                  <button
+                    onClick={() => handleReRequest(activeRequest)}
+                    className="btn btn-primary"
+                    style={{ padding: '0.4rem 0.85rem', fontSize: '0.75rem', fontWeight: 700 }}
+                  >
+                    🔄 {t('request_again')}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('live_tracking_map')}</h3>
               {statusUpper === 'EN_ROUTE' && (
