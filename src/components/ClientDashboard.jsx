@@ -49,7 +49,10 @@ export default function ClientDashboard() {
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   const activeRequest = requests.find((r) => r.id === activeRequestId && !['CANCELLED'].includes(r.status?.toUpperCase()));
-  const statusUpper = activeRequest?.status ? activeRequest.status.toUpperCase() : 'PENDING';
+  const isClaimed = Boolean(activeRequest?.mechanic_id);
+  const statusUpper = isClaimed && (!activeRequest?.status || activeRequest.status?.toUpperCase() === 'PENDING')
+    ? 'ACCEPTED'
+    : (activeRequest?.status ? activeRequest.status.toUpperCase() : 'PENDING');
 
   // Calculate dynamic fair market price range
   const priceEstimate = getEstimatedPriceRange(
