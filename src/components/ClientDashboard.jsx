@@ -264,9 +264,10 @@ export default function ClientDashboard() {
       case 'PENDING': return '0%';
       case 'ACCEPTED': return '25%';
       case 'EN_ROUTE': return '50%';
-      case 'ARRIVED': return '75%';
-      case 'IN_PROGRESS': return '90%';
-      case 'COMPLETED': return '100%';
+      case 'ARRIVED':
+      case 'IN_PROGRESS':
+      case 'COMPLETED':
+        return '75%';
       default: return '0%';
     }
   };

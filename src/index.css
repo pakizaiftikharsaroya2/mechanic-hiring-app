@@ -433,15 +433,28 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   display: flex;
   justify-content: space-between;
   position: relative;
-  padding: 0 0.5rem;
+  padding: 0;
+}
+
+.timeline-stepper::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: 12.5%;
+  right: 12.5%;
+  height: 3px;
+  background: var(--border-color);
+  border-radius: 4px;
+  z-index: 0;
 }
 
 .timeline-progress-line {
   position: absolute;
   top: 14px;
-  left: 10%;
+  left: 12.5%;
+  max-width: 75%;
   height: 3px;
-  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  background: var(--primary);
   border-radius: 4px;
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 0;
