@@ -1,6 +1,10 @@
-// Universal Live Cloud Real-Time Sync Engine for AutoRescue Pakistan
-const CLOUD_ENDPOINT = 'https://crudcrud.com/api/3ef4a27e4c8b49a7a02b3973937d1e13/requests';
-const channel = typeof window !== 'undefined' && window.BroadcastChannel ? new BroadcastChannel('autorescue_pk_sync_v6') : null;
+// Universal Rock-Solid Live Cloud Database Relay Engine for AutoRescue Pakistan
+const BIN_URL = 'https://extendsclass.com/api/json-storage/bin/abfdade';
+const channel = typeof window !== 'undefined' && window.BroadcastChannel 
+  ? new BroadcastChannel('autorescue_pk_cloud_relay_v7') 
+  : null;
+
+let lastCloudRequestsCache = [];
 
 function isValidRequest(req) {
   return Boolean(
@@ -13,24 +17,22 @@ function isValidRequest(req) {
 }
 
 /**
- * Fetch all shared requests from the cloud backend
+ * Fetch all shared requests from the cloud database
  */
 export async function fetchAllCloudRequests() {
   try {
-    const res = await fetch(CLOUD_ENDPOINT);
+    const res = await fetch(BIN_URL);
     if (res.ok) {
-      const cloudList = await res.json();
-      if (Array.isArray(cloudList)) {
-        const validList = cloudList.filter(isValidRequest);
-        localStorage.setItem('mock_service_requests', JSON.stringify(validList));
-        return validList;
-      }
+      const json = await res.json();
+      const requests = Array.isArray(json?.requests) ? json.requests.filter(isValidRequest) : [];
+      lastCloudRequestsCache = requests;
+      localStorage.setItem('mock_service_requests', JSON.stringify(requests));
+      return requests;
     }
   } catch (err) {
     console.warn('Cloud fetch notice:', err);
   }
 
-  // Fallback to local storage
   const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]').filter(isValidRequest);
   return local;
 }
@@ -47,20 +49,22 @@ export async function fetchAllCloudMessages() {
 }
 
 /**
- * Broadcast and persist request update to Cloud Backend + Local Storage + BroadcastChannel
+ * Persist request update to Live Cloud DB + Local Storage + BroadcastChannel
  */
 export async function syncCloudRequest(req) {
   if (!isValidRequest(req)) return;
 
-  // 1. Update local storage immediately for 0ms responsiveness
+  // 1. Update local storage immediately for 0ms same-window speed
+  let updatedLocal = [];
   try {
-    let local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]').filter(isValidRequest);
+    const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]').filter(isValidRequest);
     const idx = local.findIndex((r) => String(r.id) === String(req.id));
     if (idx >= 0) {
       local[idx] = { ...local[idx], ...req };
     } else {
       local.unshift(req);
     }
+    updatedLocal = local;
     localStorage.setItem('mock_service_requests', JSON.stringify(local));
 
     try {
@@ -72,32 +76,34 @@ export async function syncCloudRequest(req) {
     }
   } catch (e) {}
 
-  // 2. Persist to Live Cloud Backend (so all other Google profiles, windows & devices sync)
+  // 2. Persist to Global Cloud Database (for separate Google profiles, incognito & cross-device)
   try {
-    const res = await fetch(CLOUD_ENDPOINT);
-    if (res.ok) {
-      const cloudList = await res.json();
-      const existingDoc = Array.isArray(cloudList) ? cloudList.find((r) => String(r.id) === String(req.id)) : null;
-
-      if (existingDoc && existingDoc._id) {
-        // Update existing cloud document
-        const { _id, ...cleanExisting } = existingDoc;
-        await fetch(`${CLOUD_ENDPOINT}/${existingDoc._id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...cleanExisting, ...req }),
-        });
-      } else {
-        // Create new cloud document
-        await fetch(CLOUD_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(req),
-        });
+    let cloudList = [...lastCloudRequestsCache];
+    try {
+      const res = await fetch(BIN_URL);
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json?.requests)) {
+          cloudList = json.requests.filter(isValidRequest);
+        }
       }
+    } catch (e) {}
+
+    const cIdx = cloudList.findIndex((r) => String(r.id) === String(req.id));
+    if (cIdx >= 0) {
+      cloudList[cIdx] = { ...cloudList[cIdx], ...req };
+    } else {
+      cloudList.unshift(req);
     }
+    lastCloudRequestsCache = cloudList;
+
+    await fetch(BIN_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: cloudList }),
+    });
   } catch (err) {
-    console.warn('Cloud sync write error:', err);
+    console.warn('Cloud database write notice:', err);
   }
 }
 
@@ -154,7 +160,7 @@ export function subscribeCloudEvents(onEvent) {
     window.addEventListener('storage', handleStorage);
   }
 
-  // 4. Fast 800ms Cloud Polling Loop for cross-profile real-time sync
+  // 4. Regular 1.2s Cloud Polling Loop for cross-profile real-time sync
   const pollInterval = setInterval(async () => {
     try {
       const cloudReqs = await fetchAllCloudRequests();
@@ -162,7 +168,7 @@ export function subscribeCloudEvents(onEvent) {
         onEvent({ type: 'SYNC_REQUEST', data: cloudReqs });
       }
     } catch (e) {}
-  }, 800);
+  }, 1200);
 
   return () => {
     channel?.removeEventListener('message', handleBcMessage);
