@@ -79,18 +79,20 @@ export async function submitRequestReview({ requestId, mechanicId, rating, comme
 
 /** Fetch all reviews and computed rating for a mechanic */
 export function getMechanicRatingSummary(mechanicId) {
-  if (!mechanicId) return { rating: '5.0', review_count: 1, reviews: [] };
+  if (!mechanicId) return { rating: '5.0', review_count: 0, reviews: [] };
   try {
     const profiles = JSON.parse(localStorage.getItem('mock_mechanic_profiles') || '[]');
     const p = profiles.find(pr => String(pr.user_id) === String(mechanicId));
-    if (p && p.rating) {
+    if (p) {
+      const list = p.reviews || [];
+      const count = p.review_count !== undefined ? p.review_count : list.length;
       return {
-        rating: String(p.rating),
-        review_count: p.review_count || (p.reviews?.length || 1),
-        reviews: p.reviews || []
+        rating: p.rating ? String(p.rating) : (count > 0 ? '5.0' : 'New'),
+        review_count: count,
+        reviews: list
       };
     }
   } catch (e) {}
 
-  return { rating: '5.0', review_count: 1, reviews: [] };
+  return { rating: 'New', review_count: 0, reviews: [] };
 }

@@ -216,10 +216,21 @@ export default function Profile() {
 
           {role === 'MECHANIC' && (() => {
             const storedProfiles = JSON.parse(localStorage.getItem('mock_mechanic_profiles') || '[]');
-            const mech = storedProfiles.find(p => p.user_id === user?.id) || { rating: '5.0', review_count: 1, reviews: [] };
-            const currentRating = mech.rating || '5.0';
-            const reviewCount = mech.review_count || (mech.reviews?.length || 1);
-            const reviewList = mech.reviews || [];
+            const allReqs = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+            const realReviews = allReqs
+              .filter(r => (String(r.mechanic_id) === String(user?.id) || !r.mechanic_id) && r.client_rating)
+              .map(r => ({
+                rating: Number(r.client_rating),
+                comment: r.client_review || 'Great service!',
+                client_name: r.client_name || 'Verified Client',
+                date: r.reviewed_at || r.updated_at
+              }));
+
+            const mech = storedProfiles.find(p => p.user_id === user?.id);
+            const reviewList = (mech?.reviews && mech.reviews.length > 0) ? mech.reviews : realReviews;
+            const reviewCount = reviewList.length;
+            const totalStars = reviewList.reduce((acc, curr) => acc + curr.rating, 0);
+            const currentRating = reviewCount > 0 ? (totalStars / reviewCount).toFixed(1) : null;
 
             return (
               <div style={{ borderTop: '1px dashed var(--border-color)', marginTop: '1.75rem', paddingTop: '1.25rem' }}>
@@ -227,9 +238,15 @@ export default function Profile() {
                   <h4 style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.88rem', letterSpacing: '0.04em', margin: 0 }}>
                     ⭐ Mechanic Rating & Client Reviews
                   </h4>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', padding: '0.25rem 0.65rem', borderRadius: '12px' }}>
-                    ★ {currentRating} / 5.0 ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
-                  </span>
+                  {reviewCount === 0 ? (
+                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-muted)', background: 'var(--bg-main)', border: '1px solid var(--border-color)', padding: '0.25rem 0.65rem', borderRadius: '12px' }}>
+                      ★ New (0 reviews)
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', padding: '0.25rem 0.65rem', borderRadius: '12px' }}>
+                      ★ {currentRating} / 5.0 ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
+                    </span>
+                  )}
                 </div>
 
                 {reviewList.length === 0 ? (
