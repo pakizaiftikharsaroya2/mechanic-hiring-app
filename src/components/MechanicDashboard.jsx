@@ -209,7 +209,10 @@ export default function MechanicDashboard() {
     }
   };
 
-  const formatPKR = (amount) => `Rs. ${Number(amount).toLocaleString('en-PK')}`;
+  const formatPKR = (amount) => {
+    const num = Number(amount);
+    return isNaN(num) || num <= 0 ? 'Rs. 2,500' : `Rs. ${num.toLocaleString('en-PK')}`;
+  };
 
   const withDistance = available
     .filter((r) => !declinedIds.has(r.id))

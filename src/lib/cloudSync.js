@@ -1,9 +1,13 @@
 // Universal Zero-Latency Multi-Profile & Multi-Device Real-Time Cloud Relay Engine
-const RELAY_TOPIC = 'autorescue_pakistan_relay_v1';
+const RELAY_TOPIC = 'autorescue_pk_cloud_v3';
 const RELAY_URL = `https://ntfy.sh/${RELAY_TOPIC}`;
 
 // Local BroadcastChannel for 0ms same-machine tab sync
-const channel = typeof window !== 'undefined' && window.BroadcastChannel ? new BroadcastChannel('autorescue_global_sync') : null;
+const channel = typeof window !== 'undefined' && window.BroadcastChannel ? new BroadcastChannel('autorescue_global_sync_v3') : null;
+
+function isValidRequest(req) {
+  return req && req.id && req.status && req.vehicle_make && req.location_text;
+}
 
 /**
  * Fetch all shared requests from the cloud relay and merge with local storage
@@ -14,14 +18,15 @@ export async function fetchAllCloudRequests() {
     if (res.ok) {
       const text = await res.text();
       const lines = text.split('\n').filter(Boolean);
-      const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+      let local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+      local = local.filter(isValidRequest);
 
       lines.forEach((line) => {
         try {
           const item = JSON.parse(line);
           if (item.message) {
             const payload = JSON.parse(item.message);
-            if (payload.type === 'SYNC_REQUEST' && payload.data) {
+            if (payload.type === 'SYNC_REQUEST' && isValidRequest(payload.data)) {
               const req = payload.data;
               const idx = local.findIndex((r) => String(r.id) === String(req.id));
               if (idx >= 0) {
@@ -40,7 +45,9 @@ export async function fetchAllCloudRequests() {
   } catch (err) {
     console.warn('Cloud fetch error:', err);
   }
-  return JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+  const filteredLocal = (JSON.parse(localStorage.getItem('mock_service_requests') || '[]')).filter(isValidRequest);
+  localStorage.setItem('mock_service_requests', JSON.stringify(filteredLocal));
+  return filteredLocal;
 }
 
 /**
@@ -54,11 +61,11 @@ export async function fetchAllCloudMessages() {
  * Broadcast request update to Cloud Relay + BroadcastChannel + LocalStorage
  */
 export async function syncCloudRequest(req) {
-  if (!req || !req.id) return;
+  if (!isValidRequest(req)) return;
 
   // 1. Update local storage
   try {
-    const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+    const local = (JSON.parse(localStorage.getItem('mock_service_requests') || '[]')).filter(isValidRequest);
     const idx = local.findIndex((r) => String(r.id) === String(req.id));
     if (idx >= 0) {
       local[idx] = { ...local[idx], ...req };
@@ -140,9 +147,9 @@ export function subscribeCloudEvents(onEvent) {
           const item = JSON.parse(event.data);
           if (item.message) {
             const payload = JSON.parse(item.message);
-            if (payload.type === 'SYNC_REQUEST' && payload.data) {
+            if (payload.type === 'SYNC_REQUEST' && isValidRequest(payload.data)) {
               const req = payload.data;
-              const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+              const local = (JSON.parse(localStorage.getItem('mock_service_requests') || '[]')).filter(isValidRequest);
               const idx = local.findIndex((r) => String(r.id) === String(req.id));
               if (idx >= 0) {
                 local[idx] = { ...local[idx], ...req };

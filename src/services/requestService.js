@@ -204,6 +204,43 @@ export async function updateRequestStatus(requestId, newStatus) {
 
 /** Client cancelling their own PENDING/ACCEPTED/EN_ROUTE request — plain RLS update is fine here. */
 export async function cancelRequest(requestId, reason = '') {
+  if (isMock) {
+    const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+    const idx = local.findIndex((r) => String(r.id) === String(requestId));
+    if (idx < 0) throw new Error('Request not found');
+
+    const currentReq = local[idx];
+    const updatedDescription = reason
+      ? `${currentReq.description || ''}\n[Cancellation Reason: ${reason}]`
+      : (currentReq.description || '');
+
+    const cancelledReq = {
+      ...currentReq,
+      status: 'CANCELLED',
+      description: updatedDescription,
+      cancelled_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    local[idx] = cancelledReq;
+    localStorage.setItem('mock_service_requests', JSON.stringify(local));
+
+    // If there was an assigned mechanic, set their profile status back to ONLINE
+    if (currentReq.mechanic_id) {
+      try {
+        const mechProfiles = JSON.parse(localStorage.getItem('mock_mechanic_profiles') || '[]');
+        const mIdx = mechProfiles.findIndex((m) => m.user_id === currentReq.mechanic_id);
+        if (mIdx >= 0) {
+          mechProfiles[mIdx].status = 'ONLINE';
+          localStorage.setItem('mock_mechanic_profiles', JSON.stringify(mechProfiles));
+        }
+      } catch (e) {}
+    }
+
+    await syncCloudRequest(cancelledReq);
+    return cancelledReq;
+  }
+
   // First, fetch request to see if it has an assigned mechanic and get original description
   const { data: request, error: fetchErr } = await supabase
     .from('service_requests')

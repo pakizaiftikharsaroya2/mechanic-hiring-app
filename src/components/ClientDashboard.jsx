@@ -265,7 +265,10 @@ export default function ClientDashboard() {
     }
   };
 
-  const formatPKR = (amount) => `Rs. ${Number(amount).toLocaleString('en-PK')}`;
+  const formatPKR = (amount) => {
+    const num = Number(amount);
+    return isNaN(num) || num <= 0 ? 'Rs. 2,500' : `Rs. ${num.toLocaleString('en-PK')}`;
+  };
 
   return (
     <div className="fade-in" style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem', width: '100%', flexGrow: 1 }}>
