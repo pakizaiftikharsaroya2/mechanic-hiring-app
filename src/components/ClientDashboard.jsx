@@ -50,11 +50,12 @@ export default function ClientDashboard() {
   const [selectedTip, setSelectedTip] = useState(0);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
-  const activeRequest = requests.find((r) => r.id === activeRequestId && !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()));
+  const activeRequest = (activeRequestId && requests.find((r) => r.id === activeRequestId && r.status?.toUpperCase() !== 'CANCELLED'))
+    || requests.find((r) => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()))
+    || requests.find((r) => r.status?.toUpperCase() === 'COMPLETED' && !r.client_rating);
+
   const isClaimed = Boolean(activeRequest?.mechanic_id);
-  const statusUpper = isClaimed && (!activeRequest?.status || activeRequest.status?.toUpperCase() === 'PENDING')
-    ? 'ACCEPTED'
-    : (activeRequest?.status ? activeRequest.status.toUpperCase() : 'PENDING');
+  const statusUpper = activeRequest?.status ? activeRequest.status.toUpperCase() : (isClaimed ? 'ACCEPTED' : 'PENDING');
 
   // Calculate dynamic fair market price range
   const priceEstimate = getEstimatedPriceRange(
@@ -103,7 +104,7 @@ export default function ClientDashboard() {
   // Automatically keep ongoing active request open on initial load unless dismissed
   React.useEffect(() => {
     if (hasUserDismissedRef.current || !requests || requests.length === 0 || activeRequestId) return;
-    const latestActive = requests.find(r => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()));
+    const latestActive = requests.find(r => !['CANCELLED'].includes(r.status?.toUpperCase()));
     if (latestActive) {
       setActiveRequestId(latestActive.id);
     }
@@ -278,13 +279,12 @@ export default function ClientDashboard() {
   const getStepProgressWidth = (status) => {
     const s = status ? status.toUpperCase() : 'PENDING';
     switch (s) {
-      case 'PENDING': return '0%';
-      case 'ACCEPTED': return '25%';
-      case 'EN_ROUTE': return '50%';
+      case 'PENDING': return '10%';
+      case 'ACCEPTED': return '35%';
+      case 'EN_ROUTE': return '60%';
       case 'ARRIVED':
-      case 'IN_PROGRESS':
-      case 'COMPLETED':
-        return '75%';
+      case 'IN_PROGRESS': return '85%';
+      case 'COMPLETED': return '100%';
       default: return '0%';
     }
   };
@@ -775,11 +775,66 @@ export default function ClientDashboard() {
               </div>
             )}
 
+            {statusUpper === 'COMPLETED' && (
+              <div style={{
+                background: 'rgba(16, 185, 129, 0.1)',
+                border: '1.5px solid var(--success)',
+                borderRadius: 'var(--radius-md)',
+                padding: '1rem 1.25rem',
+                marginBottom: '1rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '0.75rem'
+              }}>
+                <div>
+                  <strong style={{ color: 'var(--success)', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🎉</span> {t('Service Completed Successfully!')}
+                  </strong>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                    {t('Your vehicle breakdown has been resolved by')} <strong>{mechanicProfile?.name || activeRequest.mechanic_name || 'your assigned mechanic'}</strong>.
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedReviewReq(activeRequest);
+                      setShowReviewModal(true);
+                    }}
+                    className="btn btn-primary"
+                    style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', fontWeight: 700 }}
+                  >
+                    ⭐ {activeRequest.client_rating ? 'View Review' : 'Rate & Review'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDismissActiveRequest}
+                    className="btn btn-outline"
+                    style={{ padding: '0.45rem 0.75rem', fontSize: '0.8rem' }}
+                  >
+                    + New Request
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('live_tracking_map')}</h3>
               {statusUpper === 'EN_ROUTE' && (
                 <span style={{ fontSize: '0.75rem', color: 'var(--secondary)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span className="pulse-indicator"></span> {t('heading_to_location')}
+                  <span className="pulse-indicator"></span> 🚗 {t('heading_to_location')}
+                </span>
+              )}
+              {['ARRIVED', 'IN_PROGRESS'].includes(statusUpper) && (
+                <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span className="pulse-indicator" style={{ background: 'var(--primary)' }}></span> 🔧 {t('mechanic_working')}
+                </span>
+              )}
+              {statusUpper === 'COMPLETED' && (
+                <span style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  ✓ {t('Completed')}
                 </span>
               )}
             </div>
@@ -800,27 +855,43 @@ export default function ClientDashboard() {
             <div className="glass-panel" style={{ padding: '1.25rem 1rem', background: 'var(--bg-card)' }}>
               <div className="timeline-stepper">
                 <div className="timeline-progress-line" style={{ width: getStepProgressWidth(statusUpper) }}></div>
-                <div className="timeline-step completed">
-                  <div className="timeline-bubble">✓</div>
+                
+                {/* Step 1: Sent */}
+                <div className={`timeline-step ${statusUpper !== 'PENDING' ? 'completed' : 'active'}`}>
+                  <div className="timeline-bubble">{statusUpper !== 'PENDING' ? '✓' : '1'}</div>
                   <div className="timeline-label">{t('Sent')}</div>
                 </div>
-                <div className={`timeline-step ${['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? 'completed' : ''}`}>
+
+                {/* Step 2: Claimed */}
+                <div className={`timeline-step ${['EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? 'completed' : statusUpper === 'ACCEPTED' ? 'active' : ''}`}>
                   <div className="timeline-bubble">
-                    {['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? '✓' : '2'}
+                    {['EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? '✓' : '2'}
                   </div>
                   <div className="timeline-label">{t('Claimed')}</div>
                 </div>
-                <div className={`timeline-step ${['EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? 'completed' : statusUpper === 'ACCEPTED' ? 'active' : ''}`}>
-                  <div className="timeline-bubble">
-                    {['EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? '✓' : '3'}
-                  </div>
-                  <div className="timeline-label">{t('En Route')}</div>
-                </div>
+
+                {/* Step 3: En Route */}
                 <div className={`timeline-step ${['ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? 'completed' : statusUpper === 'EN_ROUTE' ? 'active' : ''}`}>
                   <div className="timeline-bubble">
-                    {['ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? '✓' : '4'}
+                    {['ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? '✓' : '3'}
                   </div>
-                  <div className="timeline-label">{t('Arrived')}</div>
+                  <div className="timeline-label">{statusUpper === 'EN_ROUTE' ? '🚗 En Route' : t('En Route')}</div>
+                </div>
+
+                {/* Step 4: Repairing */}
+                <div className={`timeline-step ${statusUpper === 'COMPLETED' ? 'completed' : ['ARRIVED', 'IN_PROGRESS'].includes(statusUpper) ? 'active' : ''}`}>
+                  <div className="timeline-bubble">
+                    {statusUpper === 'COMPLETED' ? '✓' : '4'}
+                  </div>
+                  <div className="timeline-label">{['ARRIVED', 'IN_PROGRESS'].includes(statusUpper) ? '🔧 Repairing' : t('Arrived')}</div>
+                </div>
+
+                {/* Step 5: Done */}
+                <div className={`timeline-step ${statusUpper === 'COMPLETED' ? 'completed' : ''}`}>
+                  <div className="timeline-bubble">
+                    {statusUpper === 'COMPLETED' ? '✓' : '5'}
+                  </div>
+                  <div className="timeline-label">{statusUpper === 'COMPLETED' ? '🎉 Done' : 'Completed'}</div>
                 </div>
               </div>
             </div>
