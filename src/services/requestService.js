@@ -261,3 +261,30 @@ export function subscribeToAvailableRequests(onInsert) {
 
   return () => supabase.removeChannel(channel);
 }
+
+/** Clear all completed and cancelled requests from local storage and cloud store */
+export async function clearRequestHistory() {
+  const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+  const filtered = local.filter((r) => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()));
+  localStorage.setItem('mock_service_requests', JSON.stringify(filtered));
+
+  try {
+    const STORE_URL = 'https://api.restful-api.dev/objects/ff8081819ff5b11001a022a3eb4d6778';
+    const res = await fetch(STORE_URL);
+    let cloudMessages = [];
+    if (res.ok) {
+      const json = await res.json();
+      cloudMessages = json?.data?.messages || [];
+    }
+    await fetch(STORE_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'AutoRescue_Requests_Store',
+        data: { requests: filtered, messages: cloudMessages }
+      }),
+    });
+  } catch (e) {}
+
+  return filtered;
+}

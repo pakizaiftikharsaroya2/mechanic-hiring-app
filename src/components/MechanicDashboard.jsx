@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAvailableRequests, useMechanicRequests } from '../hooks/useRequests';
-import { acceptRequest, updateRequestStatus } from '../services/requestService';
+import { acceptRequest, updateRequestStatus, clearRequestHistory } from '../services/requestService';
 import { fetchMechanicProfile, setMechanicStatus, haversineDistanceKm, verifyMechanicProfile } from '../services/mechanicService';
 import { getBrowserLocation, watchBrowserLocation, updateMechanicLocation } from '../services/locationService';
 import { fetchProfile } from '../services/authService';
@@ -257,9 +257,25 @@ export default function MechanicDashboard() {
             </div>
           )}
 
-          <h3 style={{ margin: '2rem 0 1.25rem', fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {t('job_history')}
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '2rem 0 1.25rem' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+              {t('job_history')}
+            </h3>
+            {myRequests.some((r) => ['COMPLETED', 'CANCELLED'].includes(r.status)) && (
+              <button
+                type="button"
+                onClick={async () => {
+                  await clearRequestHistory();
+                  addToast('Job history cleared', 'success');
+                  reloadMine();
+                }}
+                className="btn btn-outline"
+                style={{ padding: '0.3rem 0.65rem', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                🗑️ {t('clear_history')}
+              </button>
+            )}
+          </div>
           {myRequests.filter((r) => ['COMPLETED', 'CANCELLED'].includes(r.status)).length === 0 ? (
             <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', background: 'var(--bg-card)' }}>
               {t('no_completed_jobs')}

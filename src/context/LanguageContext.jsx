@@ -434,6 +434,7 @@ const translations = {
     "request_again": "Request Again",
     "Request Cancelled": "Request Cancelled",
     "This request was cancelled. You can request again with the same vehicle & location details.": "This request was cancelled. You can request again with the same vehicle & location details.",
+    "clear_history": "Clear History",
     
     // Mechanic Dispatch Console
     "incoming_requests": "Incoming Requests",
@@ -875,6 +876,7 @@ const translations = {
     "request_again": "دوبارہ درخواست کریں",
     "Request Cancelled": "درخواست منسوخ کر دی گئی ہے",
     "This request was cancelled. You can request again with the same vehicle & location details.": "یہ درخواست منسوخ ہو چکی ہے۔ آپ اسی گاڑی اور لوکیشن کے ساتھ دوبارہ درخواست بھیج سکتے ہیں۔",
+    "clear_history": "ہسٹری صاف کریں",
 
     // Mechanic Dispatch Console
     "incoming_requests": "موصول شدہ درخواستیں",

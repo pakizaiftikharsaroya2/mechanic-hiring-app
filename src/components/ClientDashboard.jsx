@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useClientRequests } from '../hooks/useRequests';
-import { createRequest, cancelRequest } from '../services/requestService';
+import { createRequest, cancelRequest, clearRequestHistory } from '../services/requestService';
 import { getBrowserLocation, subscribeToMechanicLocation } from '../services/locationService';
 import { reverseGeocode } from '../services/routingService';
 import { fetchProfile } from '../services/authService';
@@ -47,7 +47,7 @@ export default function ClientDashboard() {
   const [selectedTip, setSelectedTip] = useState(0);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
-  const activeRequest = requests.find((r) => r.id === activeRequestId);
+  const activeRequest = requests.find((r) => r.id === activeRequestId && !['CANCELLED'].includes(r.status?.toUpperCase()));
   const statusUpper = activeRequest?.status ? activeRequest.status.toUpperCase() : 'PENDING';
 
   // Automatically show rating & review modal when job completes
@@ -527,9 +527,25 @@ export default function ClientDashboard() {
           </div>
 
           <div>
-            <h3 style={{ marginBottom: '1.25rem', fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {t('your_requests')}
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                {t('your_requests')}
+              </h3>
+              {requests.some((r) => ['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase())) && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await clearRequestHistory();
+                    addToast('Request history cleared', 'success');
+                    reload();
+                  }}
+                  className="btn btn-outline"
+                  style={{ padding: '0.3rem 0.65rem', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  🗑️ {t('clear_history')}
+                </button>
+              )}
+            </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {loading ? (
