@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
+import { getMechanicRatingSummary, getPersistentReviews } from '../services/reviewService';
 
 export default function Profile() {
   const { user, profile, updateLocalProfile, addToast, role, logout } = useAuth();
@@ -215,21 +216,9 @@ export default function Profile() {
           </div>
 
           {role === 'MECHANIC' && (() => {
-            const storedProfiles = JSON.parse(localStorage.getItem('mock_mechanic_profiles') || '[]');
-            const allReqs = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
-            const realReviews = allReqs
-              .filter(r => (String(r.mechanic_id) === String(user?.id) || !r.mechanic_id) && r.client_rating)
-              .map(r => ({
-                rating: Number(r.client_rating),
-                comment: r.client_review || 'Great service!',
-                client_name: r.client_name || 'Verified Client',
-                date: r.reviewed_at || r.updated_at
-              }));
-
-            const mech = storedProfiles.find(p => p.user_id === user?.id);
-            const reviewList = (mech?.reviews && mech.reviews.length > 0) ? mech.reviews : realReviews;
+            const reviewList = getPersistentReviews(user?.id);
             const reviewCount = reviewList.length;
-            const totalStars = reviewList.reduce((acc, curr) => acc + curr.rating, 0);
+            const totalStars = reviewList.reduce((acc, curr) => acc + Number(curr.rating || 5), 0);
             const currentRating = reviewCount > 0 ? (totalStars / reviewCount).toFixed(1) : null;
 
             return (

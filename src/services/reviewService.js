@@ -1,8 +1,33 @@
-import { syncCloudRequest, fetchAllCloudRequests } from '../lib/cloudSync';
+import { syncCloudRequest } from '../lib/cloudSync';
+
+/** Dedicated persistent reviews store (NEVER cleared when service request history is cleared) */
+export function getPersistentReviews(mechanicId) {
+  try {
+    const all = JSON.parse(localStorage.getItem('mock_mechanic_reviews_store') || '{}');
+    if (mechanicId) return all[String(mechanicId)] || all['mechanic_muhammad'] || [];
+    return all;
+  } catch (e) {
+    return [];
+  }
+}
+
+export function savePersistentReview(mechanicId, reviewItem) {
+  try {
+    const targetKey = String(mechanicId || 'mechanic_muhammad');
+    const all = JSON.parse(localStorage.getItem('mock_mechanic_reviews_store') || '{}');
+    const list = all[targetKey] || [];
+    // Prevent duplicate review push
+    if (!list.some(r => r.comment === reviewItem.comment && r.rating === reviewItem.rating && r.date === reviewItem.date)) {
+      list.unshift(reviewItem);
+    }
+    all[targetKey] = list;
+    localStorage.setItem('mock_mechanic_reviews_store', JSON.stringify(all));
+  } catch (e) {}
+}
 
 /**
  * Submit client rating & review for a completed service request.
- * Computes the mechanic's aggregate rating and syncs across all devices.
+ * Computes the mechanic's aggregate rating and permanently stores it.
  */
 export async function submitRequestReview({ requestId, mechanicId, rating, comment, tip = 0, clientName = 'Verified Client' }) {
   const localRequests = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
@@ -24,71 +49,60 @@ export async function submitRequestReview({ requestId, mechanicId, rating, comme
     await syncCloudRequest(updated);
   }
 
-  // Calculate mechanic aggregate rating
-  if (targetMechanicId) {
-    const allRequests = await fetchAllCloudRequests();
-    const reviewsForMech = (allRequests || [])
-      .filter(r => String(r.mechanic_id) === String(targetMechanicId) && r.client_rating)
-      .map(r => ({
-        rating: Number(r.client_rating),
-        comment: r.client_review,
-        client_name: r.client_name || 'Verified Client',
-        date: r.reviewed_at || r.updated_at || new Date().toISOString()
-      }));
+  const effectiveMechId = targetMechanicId || 'mechanic_muhammad';
 
-    if (reqIdx >= 0 && !reviewsForMech.some(rv => rv.comment === comment && rv.rating === rating)) {
-      reviewsForMech.push({
-        rating: Number(rating) || 5,
-        comment: comment || 'Excellent service!',
-        client_name: clientName,
-        date: new Date().toISOString()
-      });
-    }
+  const newReviewItem = {
+    rating: Number(rating) || 5,
+    comment: comment || 'Excellent service and quick repair!',
+    client_name: clientName,
+    tip: Number(tip) || 0,
+    date: new Date().toISOString()
+  };
 
-    const totalReviews = reviewsForMech.length;
-    const sumRatings = reviewsForMech.reduce((sum, r) => sum + r.rating, 0);
-    const avgRating = totalReviews > 0 ? (sumRatings / totalReviews).toFixed(1) : Number(rating).toFixed(1);
+  // Permanently save to isolated reviews store
+  savePersistentReview(effectiveMechId, newReviewItem);
 
-    // Save in mechanic profiles local cache
-    const profiles = JSON.parse(localStorage.getItem('mock_mechanic_profiles') || '[]');
-    const pIdx = profiles.findIndex(p => String(p.user_id) === String(targetMechanicId));
-    const mechData = {
-      user_id: targetMechanicId,
-      rating: avgRating,
-      review_count: totalReviews,
-      reviews: reviewsForMech
-    };
+  // Compute aggregate rating
+  const reviewsForMech = getPersistentReviews(effectiveMechId);
+  const totalReviews = reviewsForMech.length;
+  const sumRatings = reviewsForMech.reduce((sum, r) => sum + Number(r.rating || 5), 0);
+  const avgRating = totalReviews > 0 ? (sumRatings / totalReviews).toFixed(1) : Number(rating).toFixed(1);
 
-    if (pIdx >= 0) {
-      profiles[pIdx] = { ...profiles[pIdx], ...mechData };
-    } else {
-      profiles.push(mechData);
-    }
-    localStorage.setItem('mock_mechanic_profiles', JSON.stringify(profiles));
+  // Save to mechanic profiles cache
+  const profiles = JSON.parse(localStorage.getItem('mock_mechanic_profiles') || '[]');
+  const pIdx = profiles.findIndex(p => String(p.user_id) === String(effectiveMechId));
+  const mechData = {
+    user_id: effectiveMechId,
+    rating: avgRating,
+    review_count: totalReviews,
+    reviews: reviewsForMech
+  };
 
-    // Broadcast updated profile through storage and server
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('storage'));
-    }
+  if (pIdx >= 0) {
+    profiles[pIdx] = { ...profiles[pIdx], ...mechData };
+  } else {
+    profiles.push(mechData);
+  }
+  localStorage.setItem('mock_mechanic_profiles', JSON.stringify(profiles));
 
-    return { avgRating, totalReviews, reviews: reviewsForMech };
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('storage'));
   }
 
-  return { avgRating: Number(rating).toFixed(1), totalReviews: 1, reviews: [] };
+  return { avgRating, totalReviews, reviews: reviewsForMech };
 }
 
 /** Fetch all reviews and computed rating for a mechanic */
 export function getMechanicRatingSummary(mechanicId) {
-  if (!mechanicId) return { rating: '5.0', review_count: 0, reviews: [] };
+  const effectiveId = mechanicId || 'mechanic_muhammad';
   try {
-    const profiles = JSON.parse(localStorage.getItem('mock_mechanic_profiles') || '[]');
-    const p = profiles.find(pr => String(pr.user_id) === String(mechanicId));
-    if (p) {
-      const list = p.reviews || [];
-      const count = p.review_count !== undefined ? p.review_count : list.length;
+    const list = getPersistentReviews(effectiveId);
+    if (list && list.length > 0) {
+      const sum = list.reduce((acc, curr) => acc + Number(curr.rating || 5), 0);
+      const avg = (sum / list.length).toFixed(1);
       return {
-        rating: p.rating ? String(p.rating) : (count > 0 ? '5.0' : 'New'),
-        review_count: count,
+        rating: avg,
+        review_count: list.length,
         reviews: list
       };
     }
