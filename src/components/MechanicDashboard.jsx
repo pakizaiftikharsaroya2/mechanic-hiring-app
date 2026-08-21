@@ -29,10 +29,9 @@ export default function MechanicDashboard() {
   const [customBidAmounts, setCustomBidAmounts] = useState({});
   const stopWatchRef = useRef(null);
 
-  const activeRequest = (activeJob && !['CANCELLED'].includes(activeJob.status?.toUpperCase()) ? activeJob : null)
-    || (activeRequestId && myRequests.find((r) => r.id === activeRequestId && !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase())))
-    || myRequests.find((r) => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()))
-    || (activeRequestId && available.find((r) => r.id === activeRequestId));
+  const activeRequest = (activeJob && !['CANCELLED', 'COMPLETED'].includes(activeJob.status?.toUpperCase()) ? activeJob : null)
+    || (activeRequestId && myRequests.find((r) => r.id === activeRequestId && ['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(r.status?.toUpperCase())))
+    || myRequests.find((r) => ['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(r.status?.toUpperCase()));
 
   // Live listener to instantly detect when the client cancels the active job
   useEffect(() => {

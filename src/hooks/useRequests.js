@@ -33,7 +33,7 @@ export function useClientRequests(clientId) {
       if (!e.key || e.key.includes('service_requests')) reload();
     };
     window.addEventListener('storage', handleStorage);
-    const interval = setInterval(reload, 2000);
+    const interval = setInterval(reload, 400);
 
     // Cross-profile & cross-device cloud sync
     const unsubCloud = subscribeCloudEvents((event) => {
@@ -103,7 +103,7 @@ export function useAvailableRequests() {
       if (!e.key || e.key.includes('service_requests')) reload();
     };
     window.addEventListener('storage', handleStorage);
-    const interval = setInterval(reload, 2000);
+    const interval = setInterval(reload, 400);
 
     // Cross-profile & cross-device cloud sync
     const unsubCloud = subscribeCloudEvents((event) => {
@@ -173,7 +173,7 @@ export function useMechanicRequests(mechanicId) {
       if (!e.key || e.key.includes('service_requests')) reload();
     };
     window.addEventListener('storage', handleStorage);
-    const interval = setInterval(reload, 2000);
+    const interval = setInterval(reload, 400);
 
     // Cross-profile & cross-device cloud sync
     const unsubCloud = subscribeCloudEvents((event) => {
