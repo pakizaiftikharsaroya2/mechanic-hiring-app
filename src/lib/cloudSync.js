@@ -1,8 +1,40 @@
-// Native Vercel Serverless Sync Engine for AutoRescue Pakistan
+// Native Vercel Serverless Sync Engine with Monotonic State Lock for AutoRescue Pakistan
 const API_URL = typeof window !== 'undefined' ? `${window.location.origin}/api/sync` : '/api/sync';
 const channel = typeof window !== 'undefined' && window.BroadcastChannel 
-  ? new BroadcastChannel('autorescue_native_sync_v8') 
+  ? new BroadcastChannel('autorescue_native_sync_v9') 
   : null;
+
+const STATUS_RANK = {
+  PENDING: 0,
+  ACCEPTED: 1,
+  EN_ROUTE: 2,
+  ARRIVED: 3,
+  IN_PROGRESS: 4,
+  COMPLETED: 5,
+  CANCELLED: 6,
+};
+
+export function mergeRequest(existingReq, newReq) {
+  if (!existingReq) return newReq;
+  if (!newReq) return existingReq;
+
+  const curRank = STATUS_RANK[String(existingReq.status || 'PENDING').toUpperCase()] || 0;
+  const newRank = STATUS_RANK[String(newReq.status || 'PENDING').toUpperCase()] || 0;
+
+  // Monotonic: Never downgrade status unless cancelled
+  const effectiveStatus = (newRank >= curRank || newReq.status?.toUpperCase() === 'CANCELLED')
+    ? newReq.status
+    : existingReq.status;
+
+  return {
+    ...existingReq,
+    ...newReq,
+    status: effectiveStatus,
+    mechanic_id: newReq.mechanic_id || existingReq.mechanic_id,
+    mechanic_name: newReq.mechanic_name || existingReq.mechanic_name,
+    budget: newReq.budget || existingReq.budget,
+  };
+}
 
 function isValidRequest(req) {
   return Boolean(
@@ -24,23 +56,22 @@ export async function fetchAllCloudRequests() {
       const json = await res.json();
       if (Array.isArray(json?.requests)) {
         const validList = json.requests.filter(isValidRequest);
-        // Merge with local storage
         let local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]').filter(isValidRequest);
+        
         validList.forEach((req) => {
           const idx = local.findIndex((r) => String(r.id) === String(req.id));
           if (idx >= 0) {
-            local[idx] = { ...local[idx], ...req };
+            local[idx] = mergeRequest(local[idx], req);
           } else {
             local.unshift(req);
           }
         });
+
         localStorage.setItem('mock_service_requests', JSON.stringify(local));
         return local;
       }
     }
-  } catch (err) {
-    // Fallback to local storage if offline
-  }
+  } catch (err) {}
 
   return JSON.parse(localStorage.getItem('mock_service_requests') || '[]').filter(isValidRequest);
 }
@@ -54,8 +85,14 @@ export async function fetchAllCloudMessages() {
     if (res.ok) {
       const json = await res.json();
       if (Array.isArray(json?.messages)) {
-        localStorage.setItem('mock_messages', JSON.stringify(json.messages));
-        return json.messages;
+        let local = JSON.parse(localStorage.getItem('mock_messages') || '[]');
+        json.messages.forEach((m) => {
+          if (!local.some((loc) => loc.id === m.id)) {
+            local.push(m);
+          }
+        });
+        localStorage.setItem('mock_messages', JSON.stringify(local));
+        return local;
       }
     }
   } catch (e) {}
@@ -69,13 +106,13 @@ export async function fetchAllCloudMessages() {
 export async function syncCloudRequest(req) {
   if (!isValidRequest(req)) return;
 
-  // 1. Update local storage immediately for 0ms local response
+  // 1. Update local storage with monotonic merge
   let local = [];
   try {
     local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]').filter(isValidRequest);
     const idx = local.findIndex((r) => String(r.id) === String(req.id));
     if (idx >= 0) {
-      local[idx] = { ...local[idx], ...req };
+      local[idx] = mergeRequest(local[idx], req);
     } else {
       local.unshift(req);
     }
@@ -90,7 +127,7 @@ export async function syncCloudRequest(req) {
     }
   } catch (e) {}
 
-  // 2. Persist to Native Serverless API (for cross-profile & cross-device)
+  // 2. Persist to Native Serverless API
   try {
     await fetch(API_URL, {
       method: 'POST',
@@ -103,7 +140,7 @@ export async function syncCloudRequest(req) {
 }
 
 /**
- * Broadcast chat message
+ * Broadcast chat message to Serverless API + Local Storage + BroadcastChannel
  */
 export async function syncCloudMessage(msg) {
   if (!msg || !msg.id) return;
@@ -118,6 +155,10 @@ export async function syncCloudMessage(msg) {
     try {
       channel?.postMessage({ type: 'SYNC_MESSAGE', data: msg });
     } catch (e) {}
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('storage'));
+    }
 
     await fetch(API_URL, {
       method: 'POST',
@@ -157,7 +198,7 @@ export function subscribeCloudEvents(onEvent) {
     window.addEventListener('storage', handleStorage);
   }
 
-  // 4. Fast 700ms Serverless Polling Loop
+  // 4. Fast 500ms Serverless Polling Loop
   const pollInterval = setInterval(async () => {
     try {
       const cloudReqs = await fetchAllCloudRequests();
@@ -165,7 +206,7 @@ export function subscribeCloudEvents(onEvent) {
         onEvent({ type: 'SYNC_REQUEST', data: cloudReqs });
       }
     } catch (e) {}
-  }, 700);
+  }, 500);
 
   return () => {
     channel?.removeEventListener('message', handleBcMessage);

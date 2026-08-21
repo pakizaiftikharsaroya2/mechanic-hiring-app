@@ -1,7 +1,11 @@
 import { supabase } from '../lib/supabaseClient';
-import { syncCloudMessage, subscribeCloudEvents } from '../lib/cloudSync';
+import { syncCloudMessage, fetchAllCloudMessages, subscribeCloudEvents } from '../lib/cloudSync';
 
 export async function fetchMessages(requestId) {
+  try {
+    await fetchAllCloudMessages();
+  } catch (e) {}
+
   const { data, error } = await supabase
     .from('messages')
     .select('*')
@@ -36,7 +40,7 @@ export function subscribeToMessages(requestId, onNewMessage) {
     .subscribe();
 
   const unsubCloud = subscribeCloudEvents((event) => {
-    if (event.type === 'SYNC_MESSAGE' && event.data && event.data.request_id === requestId) {
+    if (event.type === 'SYNC_MESSAGE' && event.data && String(event.data.request_id) === String(requestId)) {
       onNewMessage(event.data);
     }
   });

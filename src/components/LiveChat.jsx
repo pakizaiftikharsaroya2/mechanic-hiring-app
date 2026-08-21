@@ -34,7 +34,7 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName, rol
       if (!e.key || e.key.includes('messages')) loadMessages(false);
     };
     window.addEventListener('storage', handleStorage);
-    const interval = setInterval(() => loadMessages(false), 3000);
+    const interval = setInterval(() => loadMessages(false), 500);
     return () => {
       window.removeEventListener('storage', handleStorage);
       clearInterval(interval);
