@@ -180,6 +180,8 @@ export default function MechanicDashboard() {
         mechanic_id: user.id,
         mechanic_name: profile?.name || user?.name || user?.email?.split('@')[0] || 'Mechanic Marcus',
         mechanic_phone: profile?.phone || user?.phone || '0300-1112223',
+        mechanic_latitude: myPosition?.latitude || mechProfile?.latitude || 31.5204,
+        mechanic_longitude: myPosition?.longitude || mechProfile?.longitude || 74.3587,
         rating: mechProfile?.rating || '4.9',
         distance_km: req._distanceKm || 1.5,
         price: finalAmount

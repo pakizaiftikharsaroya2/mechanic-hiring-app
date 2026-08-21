@@ -377,6 +377,8 @@ export async function acceptMechanicOffer(requestId, offer) {
     mechanic_id: offer.mechanic_id,
     mechanic_name: offer.mechanic_name || 'Mechanic',
     mechanic_phone: offer.mechanic_phone || offer.phone || '0300-1234567',
+    mechanic_latitude: offer.mechanic_latitude || offer.latitude || null,
+    mechanic_longitude: offer.mechanic_longitude || offer.longitude || null,
     budget: Number(offer.price) || currentReq.budget,
     status: 'ACCEPTED',
     accepted_at: new Date().toISOString(),

@@ -746,8 +746,12 @@ export default function ClientDashboard() {
             </div>
             <div style={{ flexGrow: 1 }}>
               <RealMap
-                clientPosition={{ latitude: activeRequest.latitude || 31.5204, longitude: activeRequest.longitude || 74.3587 }}
-                mechanicPosition={statusUpper === 'PENDING' ? null : (mechanicPosition || { latitude: (Number(activeRequest.latitude) || 31.5204) + 0.012, longitude: (Number(activeRequest.longitude) || 74.3587) + 0.012 })}
+                clientPosition={{ latitude: Number(activeRequest.latitude) || 31.5204, longitude: Number(activeRequest.longitude) || 74.3587 }}
+                mechanicPosition={statusUpper === 'PENDING' ? null : (
+                  (activeRequest.mechanic_latitude && activeRequest.mechanic_longitude)
+                    ? { latitude: Number(activeRequest.mechanic_latitude), longitude: Number(activeRequest.mechanic_longitude) }
+                    : (mechanicPosition || { latitude: (Number(activeRequest.latitude) || 31.5204) + 0.012, longitude: (Number(activeRequest.longitude) || 74.3587) + 0.012 })
+                )}
                 status={statusUpper}
               />
             </div>
@@ -761,7 +765,7 @@ export default function ClientDashboard() {
                   <div className="timeline-bubble">✓</div>
                   <div className="timeline-label">{t('Sent')}</div>
                 </div>
-                <div className={`timeline-step ${['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? 'completed' : 'active'}`}>
+                <div className={`timeline-step ${['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? 'completed' : ''}`}>
                   <div className="timeline-bubble">
                     {['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? '✓' : '2'}
                   </div>
@@ -783,9 +787,20 @@ export default function ClientDashboard() {
             </div>
 
             <div className="glass-panel" style={{ padding: '1.25rem', background: 'var(--bg-card)', fontSize: '0.85rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.75rem' }}>
                 <strong style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('request_summary')}</strong>
-                <strong style={{ color: 'var(--secondary)' }}>#{activeRequest.id.slice(-5)}</strong>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <strong style={{ color: 'var(--secondary)' }}>#{activeRequest.id.slice(-5)}</strong>
+                  <button 
+                    type="button"
+                    onClick={() => setActiveRequestId(null)} 
+                    className="btn"
+                    style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', background: 'var(--bg-main)', border: '1px solid var(--border-color)', cursor: 'pointer', borderRadius: 'var(--radius-sm)' }}
+                    title="Return to Request Form"
+                  >
+                    + New Request
+                  </button>
+                </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 <div><strong>{t('vehicle_label')}</strong> {t(activeRequest.vehicle_make)} {activeRequest.vehicle_model} ({t(activeRequest.vehicle_color)})</div>
