@@ -10,6 +10,15 @@ import MechanicDashboard from './components/MechanicDashboard';
 import Profile from './pages/Profile';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
+// Clean up any test ghosts from old sessions
+try {
+  const stored = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+  const validOnly = stored.filter((r) => r && r.id && r.id !== 'req_demo1' && r.location_text && r.location_text !== 'Lahore');
+  if (validOnly.length !== stored.length) {
+    localStorage.setItem('mock_service_requests', JSON.stringify(validOnly));
+  }
+} catch (e) {}
+
 function Header() {
   const { isAuthenticated, role, theme, toggleTheme, logout, user, profile } = useAuth();
   const { t, toggleLanguage, language } = useLanguage();

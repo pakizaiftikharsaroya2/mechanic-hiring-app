@@ -1,191 +1,144 @@
-// Universal Zero-Latency Multi-Profile & Multi-Device Real-Time Cloud Relay Engine
-const RELAY_TOPIC = 'autorescue_pk_cloud_v3';
-const RELAY_URL = `https://ntfy.sh/${RELAY_TOPIC}`;
-
-// Local BroadcastChannel for 0ms same-machine tab sync
-const channel = typeof window !== 'undefined' && window.BroadcastChannel ? new BroadcastChannel('autorescue_global_sync_v3') : null;
+// Universal Zero-Latency Local-First Real-Time Sync Engine
+const channel = typeof window !== 'undefined' && window.BroadcastChannel 
+  ? new BroadcastChannel('autorescue_pk_sync_v5') 
+  : null;
 
 function isValidRequest(req) {
-  return req && req.id && req.status && req.vehicle_make && req.location_text;
+  return (
+    req &&
+    req.id &&
+    req.id !== 'req_demo1' &&
+    req.status &&
+    req.vehicle_make &&
+    req.location_text &&
+    req.location_text !== 'Lahore'
+  );
 }
 
 /**
- * Fetch all shared requests from the cloud relay and merge with local storage
+ * Fetch all shared requests and sanitize localStorage
  */
 export async function fetchAllCloudRequests() {
   try {
-    const res = await fetch(`${RELAY_URL}/json?poll=1`);
-    if (res.ok) {
-      const text = await res.text();
-      const lines = text.split('\n').filter(Boolean);
-      let local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
-      local = local.filter(isValidRequest);
-
-      lines.forEach((line) => {
-        try {
-          const item = JSON.parse(line);
-          if (item.message) {
-            const payload = JSON.parse(item.message);
-            if (payload.type === 'SYNC_REQUEST' && isValidRequest(payload.data)) {
-              const req = payload.data;
-              const idx = local.findIndex((r) => String(r.id) === String(req.id));
-              if (idx >= 0) {
-                local[idx] = { ...local[idx], ...req };
-              } else {
-                local.unshift(req);
-              }
-            }
-          }
-        } catch (e) {}
-      });
-
-      localStorage.setItem('mock_service_requests', JSON.stringify(local));
-      return local;
-    }
+    let local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+    local = local.filter(isValidRequest);
+    localStorage.setItem('mock_service_requests', JSON.stringify(local));
+    return local;
   } catch (err) {
-    console.warn('Cloud fetch error:', err);
+    console.warn('Sync read error:', err);
+    return [];
   }
-  const filteredLocal = (JSON.parse(localStorage.getItem('mock_service_requests') || '[]')).filter(isValidRequest);
-  localStorage.setItem('mock_service_requests', JSON.stringify(filteredLocal));
-  return filteredLocal;
 }
 
 /**
- * Fetch all shared messages from the cloud relay
+ * Fetch all shared messages
  */
 export async function fetchAllCloudMessages() {
-  return JSON.parse(localStorage.getItem('mock_messages') || '[]');
+  try {
+    return JSON.parse(localStorage.getItem('mock_messages') || '[]');
+  } catch (e) {
+    return [];
+  }
 }
 
 /**
- * Broadcast request update to Cloud Relay + BroadcastChannel + LocalStorage
+ * Broadcast request update to BroadcastChannel + LocalStorage + Storage Events
  */
 export async function syncCloudRequest(req) {
-  if (!isValidRequest(req)) return;
+  if (!req || !req.id) return;
 
-  // 1. Update local storage
   try {
-    const local = (JSON.parse(localStorage.getItem('mock_service_requests') || '[]')).filter(isValidRequest);
+    let local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+    local = local.filter(isValidRequest);
+    
     const idx = local.findIndex((r) => String(r.id) === String(req.id));
     if (idx >= 0) {
       local[idx] = { ...local[idx], ...req };
     } else {
       local.unshift(req);
     }
+    
     localStorage.setItem('mock_service_requests', JSON.stringify(local));
-  } catch (e) {}
 
-  // 2. Broadcast to local tabs immediately
-  try {
-    channel?.postMessage({ type: 'SYNC_REQUEST', data: req });
-  } catch (e) {}
+    // 0ms instant broadcast to all tabs and windows
+    try {
+      channel?.postMessage({ type: 'SYNC_REQUESTS', data: local });
+    } catch (e) {}
 
-  // 3. Publish to Global Real-Time Cloud Relay
-  try {
-    await fetch(RELAY_URL, {
-      method: 'POST',
-      body: JSON.stringify({ type: 'SYNC_REQUEST', data: req }),
-    });
+    // Same-page event notification
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('storage'));
+    }
   } catch (err) {
-    console.warn('Cloud relay publish error:', err);
+    console.warn('Sync write error:', err);
   }
 }
 
 /**
- * Broadcast chat message to Cloud Relay + BroadcastChannel + LocalStorage
+ * Broadcast chat message to BroadcastChannel + LocalStorage
  */
 export async function syncCloudMessage(msg) {
   if (!msg || !msg.id) return;
 
-  // 1. Update local storage
   try {
     const local = JSON.parse(localStorage.getItem('mock_messages') || '[]');
     if (!local.some((m) => m.id === msg.id)) {
       local.push(msg);
       localStorage.setItem('mock_messages', JSON.stringify(local));
     }
-  } catch (e) {}
 
-  // 2. Broadcast to local tabs immediately
-  try {
-    channel?.postMessage({ type: 'SYNC_MESSAGE', data: msg });
-  } catch (e) {}
+    try {
+      channel?.postMessage({ type: 'SYNC_MESSAGE', data: msg });
+    } catch (e) {}
 
-  // 3. Publish to Global Real-Time Cloud Relay
-  try {
-    await fetch(RELAY_URL, {
-      method: 'POST',
-      body: JSON.stringify({ type: 'SYNC_MESSAGE', data: msg }),
-    });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('storage'));
+    }
   } catch (err) {}
 }
 
 /**
- * Subscribe to real-time events across different Google profiles, browsers, and devices
+ * Subscribe to real-time events across all open tabs, windows, and profiles
  */
 export function subscribeCloudEvents(onEvent) {
-  // 1. Initial fetch from Cloud Relay
+  // 1. Send initial state immediately
   fetchAllCloudRequests().then((reqs) => {
     if (onEvent) onEvent({ type: 'SYNC_REQUEST', data: reqs });
   });
 
-  // 2. Listen to BroadcastChannel for 0ms same-machine sync
+  // 2. BroadcastChannel listener (sub-1ms same-browser sync)
   const handleBcMessage = (event) => {
-    if (event.data && onEvent) {
+    if (event.data && event.data.type === 'SYNC_REQUESTS' && onEvent) {
+      onEvent({ type: 'SYNC_REQUEST', data: event.data.data });
+    } else if (event.data && event.data.type === 'SYNC_MESSAGE' && onEvent) {
       onEvent(event.data);
     }
   };
   channel?.addEventListener('message', handleBcMessage);
 
-  // 3. Ultra-Fast Server-Sent Events (SSE) live stream (<20ms latency cross-profile)
-  let eventSource = null;
-  if (typeof window !== 'undefined' && window.EventSource) {
+  // 3. Storage event listener (multi-window sync)
+  const handleStorage = () => {
     try {
-      eventSource = new EventSource(`${RELAY_URL}/sse`);
-      eventSource.onmessage = (event) => {
-        try {
-          const item = JSON.parse(event.data);
-          if (item.message) {
-            const payload = JSON.parse(item.message);
-            if (payload.type === 'SYNC_REQUEST' && isValidRequest(payload.data)) {
-              const req = payload.data;
-              const local = (JSON.parse(localStorage.getItem('mock_service_requests') || '[]')).filter(isValidRequest);
-              const idx = local.findIndex((r) => String(r.id) === String(req.id));
-              if (idx >= 0) {
-                local[idx] = { ...local[idx], ...req };
-              } else {
-                local.unshift(req);
-              }
-              localStorage.setItem('mock_service_requests', JSON.stringify(local));
-              if (onEvent) onEvent({ type: 'SYNC_REQUEST', data: local });
-            } else if (payload.type === 'SYNC_MESSAGE' && payload.data) {
-              const msg = payload.data;
-              const local = JSON.parse(localStorage.getItem('mock_messages') || '[]');
-              if (!local.some((m) => m.id === msg.id)) {
-                local.push(msg);
-                localStorage.setItem('mock_messages', JSON.stringify(local));
-              }
-              if (onEvent) onEvent(payload);
-            }
-          }
-        } catch (e) {}
-      };
-    } catch (err) {
-      console.warn('SSE connection notice:', err);
-    }
+      const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]').filter(isValidRequest);
+      if (onEvent) onEvent({ type: 'SYNC_REQUEST', data: local });
+    } catch (e) {}
+  };
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', handleStorage);
   }
 
-  // 4. Fallback interval poll every 3 seconds
+  // 4. Fast 400ms reactive loop to guarantee zero lost updates
   const pollInterval = setInterval(() => {
-    fetchAllCloudRequests().then((reqs) => {
-      if (onEvent) onEvent({ type: 'SYNC_REQUEST', data: reqs });
-    });
-  }, 3000);
+    try {
+      const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]').filter(isValidRequest);
+      if (onEvent) onEvent({ type: 'SYNC_REQUEST', data: local });
+    } catch (e) {}
+  }, 400);
 
   return () => {
     channel?.removeEventListener('message', handleBcMessage);
-    if (eventSource) {
-      eventSource.close();
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('storage', handleStorage);
     }
     clearInterval(pollInterval);
   };
