@@ -343,13 +343,14 @@ export default function ClientDashboard() {
 
   const getStepProgressWidth = (status) => {
     const s = status ? status.toUpperCase() : 'PENDING';
+    // Each percentage stops exactly AT the step dot (5 steps evenly spaced: 0%, 25%, 50%, 75%, 100%)
     switch (s) {
-      case 'PENDING': return '10%';
-      case 'ACCEPTED': return '35%';
-      case 'EN_ROUTE': return '60%';
+      case 'PENDING':    return '0%';   // at step 1 (Sent)
+      case 'ACCEPTED':   return '25%';  // at step 2 (Claimed)
+      case 'EN_ROUTE':   return '50%';  // at step 3 (En Route)
       case 'ARRIVED':
-      case 'IN_PROGRESS': return '85%';
-      case 'COMPLETED': return '100%';
+      case 'IN_PROGRESS': return '75%'; // at step 4 (Repairing)
+      case 'COMPLETED':  return '100%'; // at step 5 (Done)
       default: return '0%';
     }
   };
@@ -926,42 +927,58 @@ export default function ClientDashboard() {
               <div className="timeline-stepper">
                 <div className="timeline-progress-line" style={{ width: getStepProgressWidth(statusUpper) }}></div>
                 
-                {/* Step 1: Sent */}
+                {/* Step 1: Sent — always completed (green ✓) once request exists */}
                 <div className={`timeline-step ${statusUpper !== 'PENDING' ? 'completed' : 'active'}`}>
                   <div className="timeline-bubble">{statusUpper !== 'PENDING' ? '✓' : '1'}</div>
                   <div className="timeline-label">{t('Sent')}</div>
                 </div>
 
-                {/* Step 2: Claimed */}
-                <div className={`timeline-step ${['EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? 'completed' : statusUpper === 'ACCEPTED' ? 'active' : ''}`}>
+                {/* Step 2: Claimed — completed (green ✓) when ACCEPTED or beyond */}
+                <div className={`timeline-step ${
+                  ['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper)
+                    ? 'completed'
+                    : ''
+                }`}>
                   <div className="timeline-bubble">
-                    {['EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? '✓' : '2'}
+                    {['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? '✓' : '2'}
                   </div>
-                  <div className="timeline-label">{t('Claimed')}</div>
+                  <div className="timeline-label">Claimed</div>
                 </div>
 
-                {/* Step 3: En Route */}
-                <div className={`timeline-step ${['ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? 'completed' : statusUpper === 'EN_ROUTE' ? 'active' : ''}`}>
+                {/* Step 3: En Route — active when EN_ROUTE, completed when beyond */}
+                <div className={`timeline-step ${
+                  ['ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper)
+                    ? 'completed'
+                    : statusUpper === 'EN_ROUTE'
+                      ? 'active'
+                      : ''
+                }`}>
                   <div className="timeline-bubble">
-                    {['ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? '✓' : '3'}
+                    {['ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(statusUpper) ? '✓' : statusUpper === 'EN_ROUTE' ? '🚗' : '3'}
                   </div>
-                  <div className="timeline-label">{statusUpper === 'EN_ROUTE' ? '🚗 En Route' : t('En Route')}</div>
+                  <div className="timeline-label">En Route</div>
                 </div>
 
-                {/* Step 4: Repairing */}
-                <div className={`timeline-step ${statusUpper === 'COMPLETED' ? 'completed' : ['ARRIVED', 'IN_PROGRESS'].includes(statusUpper) ? 'active' : ''}`}>
+                {/* Step 4: Repairing — active when ARRIVED/IN_PROGRESS, completed when COMPLETED */}
+                <div className={`timeline-step ${
+                  statusUpper === 'COMPLETED'
+                    ? 'completed'
+                    : ['ARRIVED', 'IN_PROGRESS'].includes(statusUpper)
+                      ? 'active'
+                      : ''
+                }`}>
                   <div className="timeline-bubble">
-                    {statusUpper === 'COMPLETED' ? '✓' : '4'}
+                    {statusUpper === 'COMPLETED' ? '✓' : ['ARRIVED', 'IN_PROGRESS'].includes(statusUpper) ? '🔧' : '4'}
                   </div>
-                  <div className="timeline-label">{['ARRIVED', 'IN_PROGRESS'].includes(statusUpper) ? '🔧 Repairing' : t('Arrived')}</div>
+                  <div className="timeline-label">Repairing</div>
                 </div>
 
-                {/* Step 5: Done */}
+                {/* Step 5: Done — completed only when COMPLETED */}
                 <div className={`timeline-step ${statusUpper === 'COMPLETED' ? 'completed' : ''}`}>
                   <div className="timeline-bubble">
                     {statusUpper === 'COMPLETED' ? '✓' : '5'}
                   </div>
-                  <div className="timeline-label">{statusUpper === 'COMPLETED' ? '🎉 Done' : 'Completed'}</div>
+                  <div className="timeline-label">{statusUpper === 'COMPLETED' ? '🎉 Done' : 'Done'}</div>
                 </div>
               </div>
             </div>
