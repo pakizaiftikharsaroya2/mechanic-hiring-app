@@ -156,10 +156,20 @@ export default function MechanicDashboard() {
     }
   };
 
-  const handleMechanicReleaseJob = async () => {
-    if (!window.confirm(t('mech_cancel_confirm'))) return;
+  const [showReleaseModal, setShowReleaseModal] = useState(false);
+
+  const handleConfirmReleaseJob = async () => {
+    setShowReleaseModal(false);
     try {
       const reqId = activeRequest?.id || activeRequestId;
+      if (!reqId) return;
+
+      // Instant optimistic local state update
+      setActiveJob(null);
+      setActiveRequestId(null);
+      setMechProfile((prev) => (prev ? { ...prev, status: 'ONLINE' } : prev));
+      addToast(t('job_released_success'), 'success');
+
       const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
       const fullRow = local.find((r) => String(r.id) === String(reqId));
       const released = { ...(fullRow || {}), id: reqId, status: 'PENDING', mechanic_id: null, updated_at: new Date().toISOString() };
@@ -171,13 +181,11 @@ export default function MechanicDashboard() {
       }
       await syncCloudRequest(released);
 
-      await setMechanicStatus(user.id, 'ONLINE');
-      setMechProfile((prev) => (prev ? { ...prev, status: 'ONLINE' } : prev));
-      setActiveJob(null);
-      setActiveRequestId(null);
-      addToast(t('job_released_success'), 'success');
-      await reloadMine();
-      await reloadAvailable();
+      if (user?.id) {
+        await setMechanicStatus(user.id, 'ONLINE');
+      }
+      reloadMine();
+      reloadAvailable();
     } catch (err) {
       addToast(err.message || 'Failed to release job', 'error');
     }
@@ -554,7 +562,7 @@ export default function MechanicDashboard() {
                       🚗 {t('start_driving')}
                     </button>
                     <button
-                      onClick={handleMechanicReleaseJob}
+                      onClick={() => setShowReleaseModal(true)}
                       className="btn"
                       style={{ background: 'rgba(239,68,68,0.08)', color: 'var(--error)', border: '1px solid var(--error)', width: '100%', padding: '0.5rem', fontSize: '0.8rem' }}
                     >
@@ -856,6 +864,87 @@ export default function MechanicDashboard() {
             {/* Footer lock tag */}
             <div style={{ padding: '0.65rem', background: '#f8fafc', fontSize: '0.65rem', color: '#64748b', textAlign: 'center', borderTop: '1px solid var(--border-color)' }}>
               🔒 Secured by Veriff Identity Verification API SDK
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- RELEASE / DECLINE JOB MODAL ---------------- */}
+      {showReleaseModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.65)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 99999,
+          padding: '1rem',
+          backdropFilter: 'blur(6px)'
+        }}>
+          <div className="glass-panel" style={{
+            background: 'var(--bg-card)',
+            padding: '1.75rem',
+            width: '100%',
+            maxWidth: '440px',
+            boxShadow: 'var(--shadow-lg)',
+            borderRadius: '16px',
+            border: '1px solid var(--border-color)',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              width: '54px',
+              height: '54px',
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.12)',
+              color: 'var(--error)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.6rem',
+              margin: '0 auto 1rem'
+            }}>
+              ⚠️
+            </div>
+
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-main)' }}>
+              Release Job to Broadcast Board?
+            </h3>
+            
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '1.5rem' }}>
+              Are you sure you want to release this job back to the broadcast board? Other mechanics will be notified immediately to accept it, and your status will return to <strong>ONLINE</strong>.
+            </p>
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={() => setShowReleaseModal(false)}
+                className="btn btn-outline"
+                style={{ flex: 1, padding: '0.65rem', fontWeight: 600, fontSize: '0.85rem' }}
+              >
+                Keep Active Job
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReleaseJob}
+                className="btn"
+                style={{
+                  flex: 1,
+                  padding: '0.65rem',
+                  background: 'var(--error)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: 'var(--radius-sm)',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Yes, Release Job
+              </button>
             </div>
           </div>
         </div>

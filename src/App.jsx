@@ -9,16 +9,19 @@ import ClientDashboard from './components/ClientDashboard';
 import MechanicDashboard from './components/MechanicDashboard';
 import Profile from './pages/Profile';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
+import { useAvailableRequests } from './hooks/useRequests';
 
 // App Header and Navigation Bar
 
 function Header() {
   const { isAuthenticated, role, theme, toggleTheme, logout, user, profile } = useAuth();
   const { t, toggleLanguage, language } = useLanguage();
+  const { requests: availableRequests } = useAvailableRequests();
   const location = useLocation();
 
   const isHome = location.pathname === '/';
   const firstName = profile?.name ? profile.name.split(' ')[0] : (user?.email?.split('@')[0] || 'User');
+  const pendingJobsCount = role === 'MECHANIC' ? (availableRequests?.length || 0) : 0;
 
   return (
     <header className={isHome ? 'app-header app-header-transparent' : 'app-header'}>
@@ -52,8 +55,30 @@ function Header() {
             <Link
               to={role === 'MECHANIC' ? '/mechanic' : '/client'}
               className="nav-link-premium"
+              style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}
             >
               {role === 'MECHANIC' ? t('job_board') : t('request_assistance')}
+              {pendingJobsCount > 0 && (
+                <span
+                  style={{
+                    background: '#ef4444',
+                    color: '#ffffff',
+                    fontSize: '0.7rem',
+                    fontWeight: 800,
+                    padding: '0.12rem 0.45rem',
+                    borderRadius: '12px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    boxShadow: '0 0 10px rgba(239, 68, 68, 0.7)',
+                    animation: 'pulse 1.6s infinite ease-in-out'
+                  }}
+                  title={`${pendingJobsCount} active customer requests on Job Board`}
+                >
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ffffff', display: 'inline-block' }}></span>
+                  {pendingJobsCount}
+                </span>
+              )}
             </Link>
             <Link
               to="/profile"
