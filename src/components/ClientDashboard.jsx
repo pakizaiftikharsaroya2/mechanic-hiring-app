@@ -144,7 +144,44 @@ export default function ClientDashboard() {
     }
     resetRequestForm();
     setActiveRequestId(null);
-    addToast('Returned to request assistance form', 'info');
+  };
+
+  const handleForceCompleteJob = async (req) => {
+    const target = req || activeRequest;
+    if (!target) return;
+    try {
+      const completed = { ...target, status: 'COMPLETED', updated_at: new Date().toISOString() };
+      const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+      const idx = local.findIndex((r) => String(r.id) === String(target.id));
+      if (idx >= 0) {
+        local[idx] = completed;
+        localStorage.setItem('mock_service_requests', JSON.stringify(local));
+      }
+      await syncCloudRequest(completed);
+      handleDismissActiveRequest(target);
+      setSelectedReviewReq(completed);
+      setShowReviewModal(true);
+      await reload();
+    } catch (e) {
+      handleDismissActiveRequest(target);
+    }
+  };
+
+  const handleForceDiscardRequest = async (req) => {
+    const target = req || activeRequest;
+    if (!target) return;
+    try {
+      const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+      const filtered = local.filter((r) => String(r.id) !== String(target.id));
+      localStorage.setItem('mock_service_requests', JSON.stringify(filtered));
+      const completed = { ...target, status: 'COMPLETED', updated_at: new Date().toISOString() };
+      await syncCloudRequest(completed);
+      handleDismissActiveRequest(target);
+      addToast('Request discarded and closed', 'info');
+      await reload();
+    } catch (e) {
+      handleDismissActiveRequest(target);
+    }
   };
 
   // Load the assigned mechanic's profile + last known position once one is
@@ -935,12 +972,12 @@ export default function ClientDashboard() {
                   <strong style={{ color: 'var(--secondary)' }}>#{activeRequest.id.slice(-5)}</strong>
                   <button 
                     type="button"
-                    onClick={handleDismissActiveRequest} 
-                    className="btn"
-                    style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', background: 'var(--bg-main)', border: '1px solid var(--border-color)', cursor: 'pointer', borderRadius: 'var(--radius-sm)' }}
-                    title="Return to Request Form"
+                    onClick={() => handleForceDiscardRequest(activeRequest)} 
+                    className="btn btn-outline"
+                    style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem', borderColor: 'var(--error)', color: 'var(--error)', cursor: 'pointer', borderRadius: 'var(--radius-sm)', fontWeight: 700 }}
+                    title="Discard and start new request"
                   >
-                    + New Request
+                    🗑️ Discard / + New Request
                   </button>
                 </div>
               </div>
@@ -990,23 +1027,44 @@ export default function ClientDashboard() {
                   </div>
                 )}
                 {statusUpper === 'IN_PROGRESS' && (
-                  <div style={{
-                    background: 'rgba(234, 88, 12, 0.1)',
-                    border: '1.5px solid #ea580c',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '0.75rem 1rem',
-                    color: '#ea580c',
-                    fontSize: '0.85rem',
-                    fontWeight: 800,
-                    textAlign: 'center',
-                    marginBottom: '0.75rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px'
-                  }}>
-                    <span className="pulse-indicator" style={{ background: '#ea580c' }}></span>
-                    🔧 Mechanic is actively working on your vehicle at your location!
+                  <div>
+                    <div style={{
+                      background: 'rgba(234, 88, 12, 0.1)',
+                      border: '1.5px solid #ea580c',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '0.75rem 1rem',
+                      color: '#ea580c',
+                      fontSize: '0.85rem',
+                      fontWeight: 800,
+                      textAlign: 'center',
+                      marginBottom: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}>
+                      <span className="pulse-indicator" style={{ background: '#ea580c' }}></span>
+                      🔧 Mechanic is actively working on your vehicle at your location!
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleForceCompleteJob(activeRequest)}
+                        className="btn btn-primary"
+                        style={{ flex: 1, padding: '0.65rem', fontSize: '0.8rem', fontWeight: 700 }}
+                      >
+                        ✓ Mark Done & Review
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleForceDiscardRequest(activeRequest)}
+                        className="btn btn-outline"
+                        style={{ flex: 1, padding: '0.65rem', fontSize: '0.8rem', borderColor: 'var(--error)', color: 'var(--error)', fontWeight: 700 }}
+                      >
+                        🗑️ Discard & Close
+                      </button>
+                    </div>
                   </div>
                 )}
                 {statusUpper === 'COMPLETED' && (
