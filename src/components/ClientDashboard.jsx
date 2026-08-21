@@ -239,14 +239,19 @@ export default function ClientDashboard() {
   };
 
   const handleCancel = async (reason = '') => {
+    const targetId = activeRequest?.id || activeRequestId || requests.find((r) => !['CANCELLED'].includes(r.status?.toUpperCase()))?.id;
+    if (!targetId) {
+      setShowCancelModal(false);
+      return;
+    }
     try {
-      await cancelRequest(activeRequest.id, reason);
+      await cancelRequest(targetId, reason);
       addToast('Request cancelled', 'info');
       setActiveRequestId(null);
       setShowCancelModal(false);
       setCancelReason('');
       setOtherReasonText('');
-      reload();
+      await reload();
     } catch (err) {
       addToast(err.message || 'Failed to cancel', 'error');
     }
