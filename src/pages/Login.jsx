@@ -29,6 +29,12 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // Google OAuth Picker Modal
+  const [showGooglePicker, setShowGooglePicker] = useState(false);
+  const [googleName, setGoogleName] = useState('Pakiza Saroya');
+  const [googleEmail, setGoogleEmail] = useState('pakiza.saroya@gmail.com');
+  const [isCustomGoogle, setIsCustomGoogle] = useState(false);
+
   // Handle Mechanic Email Login Submit
   const handleMechanicSubmit = async (e) => {
     e.preventDefault();
@@ -46,11 +52,16 @@ export default function Login() {
   };
 
   // Handle Google Login Click (Client)
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
+    setShowGooglePicker(true);
+  };
+
+  const handleConfirmGoogleLogin = async (selectedUser) => {
     setError('');
     setSubmitting(true);
+    setShowGooglePicker(false);
     try {
-      await loginGoogle();
+      await loginGoogle(selectedUser);
       navigate('/');
     } catch (err) {
       setError('Google Sign-in failed.');
@@ -497,6 +508,174 @@ export default function Login() {
           )}
         </p>
       </div>
+
+      {/* ---------------- GOOGLE SIGN-IN ACCOUNT PICKER ---------------- */}
+      {showGooglePicker && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.65)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 99999,
+          padding: '1rem',
+          backdropFilter: 'blur(5px)'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            color: '#1f2937',
+            padding: '2rem',
+            width: '100%',
+            maxWidth: '440px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+            borderRadius: '16px',
+            fontFamily: 'Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            position: 'relative'
+          }}>
+            <button
+              type="button"
+              onClick={() => setShowGooglePicker(false)}
+              style={{
+                position: 'absolute',
+                top: '1.25rem',
+                right: '1.25rem',
+                background: 'transparent',
+                border: 'none',
+                fontSize: '1.25rem',
+                cursor: 'pointer',
+                color: '#6b7280'
+              }}
+            >
+              ✕
+            </button>
+
+            {/* Google Header */}
+            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" style={{ margin: '0 auto 0.5rem', display: 'block' }}>
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" />
+                <path fill="#34A853" d="M12 24c3.24 0 5.97-1.08 7.96-2.91l-3.86-3c-1.08.72-2.45 1.16-4.1 1.16-3.15 0-5.81-2.13-6.76-5.01H1.32v3.1A12 12 0 0 0 12 24z" />
+                <path fill="#FBBC05" d="M5.24 14.24a7.15 7.15 0 0 1 0-4.48V6.66H1.32a12 12 0 0 0 0 10.68l3.92-3.1z" />
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.32 6.66l3.92 3.1c.95-2.88 3.61-5.01 6.76-5.01z" />
+              </svg>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 600, margin: '0.2rem 0', color: '#111827' }}>
+                Sign in with Google
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: '#4b5563', margin: '0.25rem 0' }}>
+                to continue to <strong style={{ color: '#047857' }}>AutoRescue Pakistan</strong>
+              </p>
+            </div>
+
+            {/* Account List */}
+            {!isCustomGoogle ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                <button
+                  type="button"
+                  onClick={() => handleConfirmGoogleLogin({ name: googleName, email: googleEmail, phone: '0300-8877665' })}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '0.85rem 1rem',
+                    background: '#f9fafb',
+                    border: '1.5px solid #e5e7eb',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    width: '100%',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.borderColor = '#4285F4'; e.currentTarget.style.background = '#eff6ff'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.background = '#f9fafb'; }}
+                >
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#4285F4', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.1rem' }}>
+                    {googleName.charAt(0)}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <strong style={{ display: 'block', fontSize: '0.95rem', color: '#111827' }}>{googleName}</strong>
+                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{googleEmail}</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsCustomGoogle(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '0.75rem 1rem',
+                    background: '#ffffff',
+                    border: '1px dashed #d1d5db',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    width: '100%',
+                    color: '#374151',
+                    fontSize: '0.88rem',
+                    fontWeight: 600
+                  }}
+                >
+                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>
+                    ＋
+                  </div>
+                  <span>Use another Google account</span>
+                </button>
+              </div>
+            ) : (
+              <div style={{ marginBottom: '1.25rem' }}>
+                <div style={{ marginBottom: '0.85rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.35rem', color: '#374151' }}>
+                    Google Account Name:
+                  </label>
+                  <input
+                    type="text"
+                    value={googleName}
+                    onChange={(e) => setGoogleName(e.target.value)}
+                    placeholder="Your Full Name"
+                    style={{ width: '100%', padding: '0.65rem 0.85rem', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '0.9rem', outline: 'none' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.35rem', color: '#374151' }}>
+                    Google Email:
+                  </label>
+                  <input
+                    type="email"
+                    value={googleEmail}
+                    onChange={(e) => setGoogleEmail(e.target.value)}
+                    placeholder="your.email@gmail.com"
+                    style={{ width: '100%', padding: '0.65rem 0.85rem', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '0.9rem', outline: 'none' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomGoogle(false)}
+                    style={{ flex: 1, padding: '0.65rem', border: '1px solid #d1d5db', background: '#f3f4f6', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmGoogleLogin({ name: googleName, email: googleEmail, phone: '0300-8877665' })}
+                    style={{ flex: 2, padding: '0.65rem', background: '#4285F4', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Continue as {googleName.split(' ')[0]}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div style={{ fontSize: '0.75rem', color: '#9ca3af', textAlign: 'center', borderTop: '1px solid #f3f4f6', paddingTop: '0.75rem' }}>
+              Protected by Google OAuth 2.0 • AutoRescue PK Security
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

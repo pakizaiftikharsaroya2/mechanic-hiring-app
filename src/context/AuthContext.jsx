@@ -81,7 +81,43 @@ export const AuthProvider = ({ children }) => {
     window.location.href = '/';
   };
 
-  const loginGoogle = async () => {
+  const loginGoogle = async (googleUser = null) => {
+    if (googleUser && isMock) {
+      const newUser = {
+        id: `usr_google_${Date.now()}`,
+        email: googleUser.email || 'user@gmail.com',
+        user_metadata: { 
+          name: googleUser.name || 'Google Client User', 
+          role: 'CLIENT', 
+          phone: googleUser.phone || '0300-9998887',
+          avatar: googleUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&h=80&q=80'
+        }
+      };
+      const users = JSON.parse(localStorage.getItem('mock_users') || '[]');
+      users.push({ ...newUser, password: 'googleuser123' });
+      localStorage.setItem('mock_users', JSON.stringify(users));
+
+      const profiles = JSON.parse(localStorage.getItem('mock_profiles') || '[]');
+      const newProf = {
+        id: newUser.id,
+        name: newUser.user_metadata.name,
+        email: newUser.email,
+        phone: newUser.user_metadata.phone,
+        role: 'CLIENT',
+        avatar: newUser.user_metadata.avatar,
+        created_at: new Date().toISOString()
+      };
+      profiles.push(newProf);
+      localStorage.setItem('mock_profiles', JSON.stringify(profiles));
+
+      const sess = { user: newUser, access_token: 'google-real-token' };
+      localStorage.setItem('mock_session', JSON.stringify(sess));
+      setProfile(newProf);
+      setSession(sess);
+      setUser(newUser);
+      addToast(`Signed in with Google as ${newProf.name}!`, 'success');
+      return;
+    }
     await loginWithGoogle();
     addToast('Successfully signed in with Google!', 'success');
   };
