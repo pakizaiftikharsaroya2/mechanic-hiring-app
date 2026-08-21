@@ -82,12 +82,21 @@ export default function ClientDashboard() {
     }
   };
 
-  // Automatically show rating & review modal when job completes
+  const [dismissedReviewIds, setDismissedReviewIds] = useState(new Set());
+
+  // Automatically popup rating & review modal when a job is marked COMPLETED
   React.useEffect(() => {
-    if (statusUpper === 'COMPLETED' && !reviewSubmitted) {
+    if (!requests || requests.length === 0) return;
+    const completedReq = requests.find(
+      (r) => r.status?.toUpperCase() === 'COMPLETED' && !r.client_rating && !dismissedReviewIds.has(r.id)
+    );
+    if (completedReq && !showReviewModal) {
+      setSelectedReviewReq(completedReq);
+      if (completedReq.client_rating) setRating(Number(completedReq.client_rating));
+      if (completedReq.client_review) setReviewComment(completedReq.client_review);
       setShowReviewModal(true);
     }
-  }, [statusUpper, reviewSubmitted]);
+  }, [requests, dismissedReviewIds, showReviewModal]);
 
   const hasUserDismissedRef = React.useRef(false);
 
@@ -1188,14 +1197,37 @@ export default function ClientDashboard() {
             maxWidth: '480px',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             borderRadius: 'var(--radius-lg)',
-            textAlign: 'center'
+            textAlign: 'center',
+            position: 'relative'
           }}>
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedReviewReq?.id) {
+                  setDismissedReviewIds((prev) => new Set([...prev, selectedReviewReq.id]));
+                }
+                setShowReviewModal(false);
+              }}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'transparent',
+                border: 'none',
+                fontSize: '1.25rem',
+                cursor: 'pointer',
+                color: 'var(--text-muted)'
+              }}
+              title="Close"
+            >
+              ✕
+            </button>
             <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🎉</div>
             <h3 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.35rem', color: 'var(--text-main)' }}>
               Service Completed!
             </h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-              How was your experience with <strong>{mechanicProfile?.name || 'Mechanic Muhammad'}</strong>?
+              How was your experience with <strong>{selectedReviewReq?.mechanic_name || mechanicProfile?.name || 'Your Mechanic'}</strong>?
             </p>
 
             {/* 5-Star Rating Selector */}
