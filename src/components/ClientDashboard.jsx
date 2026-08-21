@@ -50,9 +50,8 @@ export default function ClientDashboard() {
   const [selectedTip, setSelectedTip] = useState(0);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
-  const activeRequest = (activeRequestId && requests.find((r) => r.id === activeRequestId && r.status?.toUpperCase() !== 'CANCELLED'))
-    || requests.find((r) => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()))
-    || requests.find((r) => r.status?.toUpperCase() === 'COMPLETED' && !r.client_rating);
+  const activeRequest = (activeRequestId && requests.find((r) => r.id === activeRequestId && !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase())))
+    || requests.find((r) => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase())) || null;
 
   const isClaimed = Boolean(activeRequest?.mechanic_id);
   const statusUpper = activeRequest?.status ? activeRequest.status.toUpperCase() : (isClaimed ? 'ACCEPTED' : 'PENDING');
@@ -96,6 +95,8 @@ export default function ClientDashboard() {
       if (completedReq.client_rating) setRating(Number(completedReq.client_rating));
       if (completedReq.client_review) setReviewComment(completedReq.client_review);
       setShowReviewModal(true);
+      resetRequestForm();
+      setActiveRequestId(null);
     }
   }, [requests, dismissedReviewIds, showReviewModal]);
 
@@ -124,15 +125,14 @@ export default function ClientDashboard() {
 
   // Automatically keep ongoing active request open on initial load unless dismissed
   React.useEffect(() => {
-    if (hasUserDismissedRef.current || !requests || requests.length === 0 || activeRequestId) return;
-    const latestActive = requests.find(r => !['CANCELLED'].includes(r.status?.toUpperCase()));
+    if (hasUserDismissedRef.current || !requests || requests.length === 0) return;
+    const latestActive = requests.find(r => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()));
     if (latestActive) {
       setActiveRequestId(latestActive.id);
-      if (latestActive.status?.toUpperCase() === 'COMPLETED') {
-        resetRequestForm();
-      }
+    } else {
+      setActiveRequestId(null);
     }
-  }, [requests, activeRequestId]);
+  }, [requests]);
 
   const handleDismissActiveRequest = () => {
     resetRequestForm();
