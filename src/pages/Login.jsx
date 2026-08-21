@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { sendRealSMSOTP, verifyRealSMSOTP } from '../lib/firebaseClient';
+import { initGoogleOneTap } from '../lib/googleAuthHelper';
 
 export default function Login() {
   const { login, loginGoogle, loginPhone, addToast } = useAuth();
@@ -42,6 +43,12 @@ export default function Login() {
   const [googleName, setGoogleName] = useState(savedGoogle?.name || '');
   const [googleEmail, setGoogleEmail] = useState(savedGoogle?.email || '');
   const [isCustomGoogle, setIsCustomGoogle] = useState(!savedGoogle);
+
+  useEffect(() => {
+    initGoogleOneTap((userPayload) => {
+      handleConfirmGoogleLogin(userPayload);
+    });
+  }, []);
 
   // Handle Mechanic Email Login Submit
   const handleMechanicSubmit = async (e) => {

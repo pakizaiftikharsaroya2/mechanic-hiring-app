@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { sendRealSMSOTP, verifyRealSMSOTP } from '../lib/firebaseClient';
+import { initGoogleOneTap } from '../lib/googleAuthHelper';
 
 export default function Register() {
   const { register, loginGoogle, loginPhone, addToast } = useAuth();
@@ -39,6 +40,12 @@ export default function Register() {
   const [ocrScanningField, setOcrScanningField] = useState(null); // 'cnicFront' | null
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+
+  useEffect(() => {
+    initGoogleOneTap((userPayload) => {
+      handleConfirmGoogleRegister(userPayload);
+    });
+  }, []);
 
   const update = (field) => (e) => {
     let value = e.target.value;
