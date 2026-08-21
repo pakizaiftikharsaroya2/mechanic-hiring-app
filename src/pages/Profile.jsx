@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { getMechanicRatingSummary, getPersistentReviews } from '../services/reviewService';
+import { getMechanicRatingSummary, getPersistentReviews, getPersistentReviewsAsync } from '../services/reviewService';
 
 export default function Profile() {
   const { user, profile, updateLocalProfile, addToast, role, logout } = useAuth();
@@ -15,6 +15,26 @@ export default function Profile() {
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [reviewsList, setReviewsList] = useState([]);
+
+  useEffect(() => {
+    const loadReviews = async () => {
+      if (role === 'MECHANIC') {
+        const revs = await getPersistentReviewsAsync(user?.id);
+        setReviewsList(revs);
+      }
+    };
+    loadReviews();
+
+    const handleStorage = () => loadReviews();
+    window.addEventListener('storage', handleStorage);
+    const interval = setInterval(loadReviews, 800);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
+  }, [role, user?.id]);
 
   useEffect(() => {
     if (profile) {
@@ -216,9 +236,9 @@ export default function Profile() {
           </div>
 
           {role === 'MECHANIC' && (() => {
-            const reviewList = getPersistentReviews(user?.id);
-            const reviewCount = reviewList.length;
-            const totalStars = reviewList.reduce((acc, curr) => acc + Number(curr.rating || 5), 0);
+            const currentList = (reviewsList && reviewsList.length > 0) ? reviewsList : getPersistentReviews(user?.id);
+            const reviewCount = currentList.length;
+            const totalStars = currentList.reduce((acc, curr) => acc + Number(curr.rating || 5), 0);
             const currentRating = reviewCount > 0 ? (totalStars / reviewCount).toFixed(1) : null;
 
             return (
@@ -238,17 +258,17 @@ export default function Profile() {
                   )}
                 </div>
 
-                {reviewList.length === 0 ? (
+                {currentList.length === 0 ? (
                   <div style={{ padding: '0.85rem', background: 'var(--bg-main)', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
                     No client reviews yet. Completed jobs with 5-star ratings will appear here.
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '180px', overflowY: 'auto' }}>
-                    {reviewList.map((rev, idx) => (
+                    {currentList.map((rev, idx) => (
                       <div key={idx} style={{ background: 'var(--bg-main)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.8rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                           <strong style={{ color: 'var(--text-main)' }}>{rev.client_name || 'Verified Client'}</strong>
-                          <span style={{ color: '#f59e0b', fontWeight: 700 }}>{'★'.repeat(rev.rating)}</span>
+                          <span style={{ color: '#f59e0b', fontWeight: 700 }}>{'★'.repeat(Number(rev.rating) || 5)}</span>
                         </div>
                         <p style={{ margin: 0, color: 'var(--text-muted)', fontStyle: 'italic' }}>"{rev.comment}"</p>
                       </div>
