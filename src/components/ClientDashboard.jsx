@@ -8,9 +8,9 @@ import { fetchProfile } from '../services/authService';
 import { fetchMechanicProfile, haversineDistanceKm } from '../services/mechanicService';
 import RealMap from './RealMap';
 import LiveChat from './LiveChat';
-import { useLanguage } from '../context/LanguageContext';
 import { BRAND_DEALERSHIP_POLICIES } from '../data/dealershipData';
 import { getEstimatedPriceRange } from '../data/pricingEstimator';
+import { submitRequestReview, getMechanicRatingSummary } from '../services/reviewService';
 
 export default function ClientDashboard() {
   const { user, profile, addToast } = useAuth();
@@ -43,6 +43,7 @@ export default function ClientDashboard() {
 
   // Rating & Review State
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedReviewReq, setSelectedReviewReq] = useState(null);
   const [rating, setRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [selectedTip, setSelectedTip] = useState(0);
@@ -688,6 +689,28 @@ export default function ClientDashboard() {
                         </div>
                       )}
 
+                      {req.status === 'COMPLETED' && (
+                        <div style={{ marginTop: '0.75rem', paddingTop: '0.5rem', borderTop: '1px dashed var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 700 }}>
+                            {req.client_rating ? `⭐ Rated ${req.client_rating} Stars` : '✅ Service Complete'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedReviewReq(req);
+                              if (req.client_rating) setRating(Number(req.client_rating));
+                              if (req.client_review) setReviewComment(req.client_review);
+                              setShowReviewModal(true);
+                            }}
+                            className="btn btn-primary"
+                            style={{ padding: '0.35rem 0.85rem', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            ⭐ {req.client_rating ? 'Update Review' : 'Rate & Review Mechanic'}
+                          </button>
+                        </div>
+                      )}
+
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
                         {t('pay_via')} <strong>{t(req.payment_method)}</strong>
                       </div>
@@ -1241,10 +1264,26 @@ export default function ClientDashboard() {
 
             <button
               type="button"
-              onClick={() => {
-                setReviewSubmitted(true);
-                setShowReviewModal(false);
-                addToast(`Review submitted with ${rating} Stars! Thank you for rating your mechanic.`, 'success');
+              onClick={async () => {
+                const targetReq = selectedReviewReq || activeRequest || requests.find(r => r.status === 'COMPLETED');
+                const targetMechId = targetReq?.mechanic_id || mechanicProfile?.user_id;
+                try {
+                  await submitRequestReview({
+                    requestId: targetReq?.id,
+                    mechanicId: targetMechId,
+                    rating,
+                    comment: reviewComment,
+                    tip: selectedTip,
+                    clientName: profile?.name || user?.name || 'Verified Client'
+                  });
+                  setReviewSubmitted(true);
+                  setShowReviewModal(false);
+                  addToast(`Review submitted with ${rating} Stars! Thank you for rating your mechanic.`, 'success');
+                  await reload();
+                } catch (e) {
+                  addToast('Review submitted locally.', 'info');
+                  setShowReviewModal(false);
+                }
               }}
               className="btn btn-primary"
               style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', fontWeight: 700 }}

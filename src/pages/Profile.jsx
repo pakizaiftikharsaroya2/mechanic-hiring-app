@@ -214,6 +214,45 @@ export default function Profile() {
             </div>
           </div>
 
+          {role === 'MECHANIC' && (() => {
+            const storedProfiles = JSON.parse(localStorage.getItem('mock_mechanic_profiles') || '[]');
+            const mech = storedProfiles.find(p => p.user_id === user?.id) || { rating: '5.0', review_count: 1, reviews: [] };
+            const currentRating = mech.rating || '5.0';
+            const reviewCount = mech.review_count || (mech.reviews?.length || 1);
+            const reviewList = mech.reviews || [];
+
+            return (
+              <div style={{ borderTop: '1px dashed var(--border-color)', marginTop: '1.75rem', paddingTop: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h4 style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.88rem', letterSpacing: '0.04em', margin: 0 }}>
+                    ⭐ Mechanic Rating & Client Reviews
+                  </h4>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', padding: '0.25rem 0.65rem', borderRadius: '12px' }}>
+                    ★ {currentRating} / 5.0 ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
+                  </span>
+                </div>
+
+                {reviewList.length === 0 ? (
+                  <div style={{ padding: '0.85rem', background: 'var(--bg-main)', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                    No client reviews yet. Completed jobs with 5-star ratings will appear here.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '180px', overflowY: 'auto' }}>
+                    {reviewList.map((rev, idx) => (
+                      <div key={idx} style={{ background: 'var(--bg-main)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.8rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                          <strong style={{ color: 'var(--text-main)' }}>{rev.client_name || 'Verified Client'}</strong>
+                          <span style={{ color: '#f59e0b', fontWeight: 700 }}>{'★'.repeat(rev.rating)}</span>
+                        </div>
+                        <p style={{ margin: 0, color: 'var(--text-muted)', fontStyle: 'italic' }}>"{rev.comment}"</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           <div style={{ display: 'flex', gap: '1rem', marginTop: '2.25rem' }}>
             <button type="button" onClick={handleGoToDashboard} className="btn btn-outline" style={{ flex: 1, padding: '0.75rem' }}>
               {t('cancel')}
