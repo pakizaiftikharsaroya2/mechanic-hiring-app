@@ -552,17 +552,22 @@ export default function MechanicDashboard() {
                   </div>
                 )}
                 {activeRequest.status === 'ARRIVED' && (
-                  <button onClick={() => handleStatusChange('IN_PROGRESS')} className="btn btn-secondary" style={{ width: '100%', padding: '0.75rem' }}>
-                    {t('start_repair')}
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <button onClick={() => handleStatusChange('IN_PROGRESS')} className="btn btn-secondary" style={{ width: '100%', padding: '0.75rem', fontWeight: 700 }}>
+                      🔧 {t('start_repair')}
+                    </button>
+                    <button onClick={() => handleStatusChange('COMPLETED')} className="btn btn-primary" style={{ width: '100%', background: 'var(--success)', padding: '0.75rem', fontWeight: 800 }}>
+                      ✅ {t('mark_completed')}
+                    </button>
+                  </div>
                 )}
                 {activeRequest.status === 'IN_PROGRESS' && (
-                  <button onClick={() => handleStatusChange('COMPLETED')} className="btn btn-primary" style={{ width: '100%', background: 'var(--success)', padding: '0.75rem' }}>
-                    {t('mark_completed')}
+                  <button onClick={() => handleStatusChange('COMPLETED')} className="btn btn-primary" style={{ width: '100%', background: 'var(--success)', padding: '0.75rem', fontWeight: 800 }}>
+                    ✅ {t('mark_completed')}
                   </button>
                 )}
                 {activeRequest.status === 'COMPLETED' && (
-                  <button onClick={() => setActiveRequestId(null)} className="btn btn-outline" style={{ width: '100%', padding: '0.75rem' }}>
+                  <button onClick={() => { setActiveJob(null); setActiveRequestId(null); }} className="btn btn-outline" style={{ width: '100%', padding: '0.75rem' }}>
                     {t('back_to_job_board')}
                   </button>
                 )}

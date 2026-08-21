@@ -87,23 +87,21 @@ export default function ClientDashboard() {
     }
   }, [statusUpper, reviewSubmitted]);
 
-  // Automatically keep ongoing active request open when navigating to other tabs (like Spare Parts) or reloading
-  React.useEffect(() => {
-    if (!requests || requests.length === 0) return;
-    
-    if (activeRequestId) {
-      const current = requests.find(r => r.id === activeRequestId);
-      if (current && !['COMPLETED', 'CANCELLED'].includes(current.status?.toUpperCase())) {
-        return;
-      }
-    }
+  const hasUserDismissedRef = React.useRef(false);
 
-    // Auto-select latest ongoing request (PENDING, ACCEPTED, EN_ROUTE, ARRIVED, IN_PROGRESS)
+  // Automatically keep ongoing active request open on initial load unless dismissed
+  React.useEffect(() => {
+    if (hasUserDismissedRef.current || !requests || requests.length === 0 || activeRequestId) return;
     const latestActive = requests.find(r => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()));
     if (latestActive) {
       setActiveRequestId(latestActive.id);
     }
   }, [requests, activeRequestId]);
+
+  const handleDismissActiveRequest = () => {
+    hasUserDismissedRef.current = true;
+    setActiveRequestId(null);
+  };
 
   // Load the assigned mechanic's profile + last known position once one is
   // attached to the active request, then keep the position live via realtime.
@@ -793,7 +791,7 @@ export default function ClientDashboard() {
                   <strong style={{ color: 'var(--secondary)' }}>#{activeRequest.id.slice(-5)}</strong>
                   <button 
                     type="button"
-                    onClick={() => setActiveRequestId(null)} 
+                    onClick={handleDismissActiveRequest} 
                     className="btn"
                     style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', background: 'var(--bg-main)', border: '1px solid var(--border-color)', cursor: 'pointer', borderRadius: 'var(--radius-sm)' }}
                     title="Return to Request Form"
