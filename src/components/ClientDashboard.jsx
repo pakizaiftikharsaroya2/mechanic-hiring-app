@@ -663,7 +663,7 @@ export default function ClientDashboard() {
             <div style={{ flexGrow: 1 }}>
               <RealMap
                 clientPosition={{ latitude: activeRequest.latitude || 31.5204, longitude: activeRequest.longitude || 74.3587 }}
-                mechanicPosition={mechanicPosition || { latitude: (Number(activeRequest.latitude) || 31.5204) + 0.012, longitude: (Number(activeRequest.longitude) || 74.3587) + 0.012 }}
+                mechanicPosition={statusUpper === 'PENDING' ? null : (mechanicPosition || { latitude: (Number(activeRequest.latitude) || 31.5204) + 0.012, longitude: (Number(activeRequest.longitude) || 74.3587) + 0.012 })}
                 status={statusUpper}
               />
             </div>
