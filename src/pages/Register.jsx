@@ -138,11 +138,19 @@ export default function Register() {
     }
   };
 
-  // Google OAuth Picker Modal
+  // Google OAuth Picker Modal (Loads user's saved Google account or prompts for their real details)
+  const savedGoogle = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('saved_google_user') || 'null');
+    } catch (e) {
+      return null;
+    }
+  })();
+
   const [showGooglePicker, setShowGooglePicker] = useState(false);
-  const [googleName, setGoogleName] = useState('Pakiza Saroya');
-  const [googleEmail, setGoogleEmail] = useState('pakiza.saroya@gmail.com');
-  const [isCustomGoogle, setIsCustomGoogle] = useState(false);
+  const [googleName, setGoogleName] = useState(savedGoogle?.name || '');
+  const [googleEmail, setGoogleEmail] = useState(savedGoogle?.email || '');
+  const [isCustomGoogle, setIsCustomGoogle] = useState(!savedGoogle);
 
   // Google OAuth Signup (Client)
   const handleGoogleRegister = () => {
@@ -150,11 +158,20 @@ export default function Register() {
   };
 
   const handleConfirmGoogleRegister = async (selectedUser) => {
+    const finalUser = {
+      name: selectedUser.name?.trim() || 'Google User',
+      email: selectedUser.email?.trim() || 'user@gmail.com',
+      phone: selectedUser.phone || '0300-8877665'
+    };
+    try {
+      localStorage.setItem('saved_google_user', JSON.stringify(finalUser));
+    } catch (e) {}
+
     setError('');
     setSubmitting(true);
     setShowGooglePicker(false);
     try {
-      await loginGoogle(selectedUser);
+      await loginGoogle(finalUser);
       navigate('/');
     } catch (err) {
       setError('Google Sign-in failed.');
@@ -809,8 +826,8 @@ export default function Register() {
               </p>
             </div>
 
-            {/* Account List */}
-            {!isCustomGoogle ? (
+            {/* Account List / Input */}
+            {!isCustomGoogle && savedGoogle ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
                 <button
                   type="button"
@@ -832,17 +849,21 @@ export default function Register() {
                   onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.background = '#f9fafb'; }}
                 >
                   <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#4285F4', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.1rem' }}>
-                    {googleName.charAt(0)}
+                    {(googleName || 'G').charAt(0).toUpperCase()}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <strong style={{ display: 'block', fontSize: '0.95rem', color: '#111827' }}>{googleName}</strong>
+                    <strong style={{ display: 'block', fontSize: '0.95rem', color: '#111827' }}>{googleName || 'Google User'}</strong>
                     <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{googleEmail}</span>
                   </div>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setIsCustomGoogle(true)}
+                  onClick={() => {
+                    setGoogleName('');
+                    setGoogleEmail('');
+                    setIsCustomGoogle(true);
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -869,42 +890,44 @@ export default function Register() {
               <div style={{ marginBottom: '1.25rem' }}>
                 <div style={{ marginBottom: '0.85rem' }}>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.35rem', color: '#374151' }}>
-                    Google Account Name:
+                    Your Name (as on Google):
                   </label>
                   <input
                     type="text"
                     value={googleName}
                     onChange={(e) => setGoogleName(e.target.value)}
-                    placeholder="Your Full Name"
+                    placeholder="Enter your name"
                     style={{ width: '100%', padding: '0.65rem 0.85rem', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '0.9rem', outline: 'none' }}
                   />
                 </div>
                 <div style={{ marginBottom: '1.25rem' }}>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.35rem', color: '#374151' }}>
-                    Google Email:
+                    Gmail Address:
                   </label>
                   <input
                     type="email"
                     value={googleEmail}
                     onChange={(e) => setGoogleEmail(e.target.value)}
-                    placeholder="your.email@gmail.com"
+                    placeholder="your.name@gmail.com"
                     style={{ width: '100%', padding: '0.65rem 0.85rem', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '0.9rem', outline: 'none' }}
                   />
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {savedGoogle && (
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomGoogle(false)}
+                      style={{ flex: 1, padding: '0.65rem', border: '1px solid #d1d5db', background: '#f3f4f6', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Back
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => setIsCustomGoogle(false)}
-                    style={{ flex: 1, padding: '0.65rem', border: '1px solid #d1d5db', background: '#f3f4f6', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleConfirmGoogleRegister({ name: googleName, email: googleEmail, phone: '0300-8877665' })}
+                    onClick={() => handleConfirmGoogleRegister({ name: googleName || 'Google User', email: googleEmail || 'user@gmail.com', phone: '0300-8877665' })}
                     style={{ flex: 2, padding: '0.65rem', background: '#4285F4', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
                   >
-                    Continue as {googleName.split(' ')[0]}
+                    Sign in with Google
                   </button>
                 </div>
               </div>
