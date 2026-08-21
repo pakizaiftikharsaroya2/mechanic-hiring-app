@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAvailableRequests, useMechanicRequests } from '../hooks/useRequests';
-import { acceptRequest, updateRequestStatus, clearRequestHistory } from '../services/requestService';
+import { acceptRequest, updateRequestStatus, clearRequestHistory, submitMechanicOffer } from '../services/requestService';
 import { fetchMechanicProfile, setMechanicStatus, haversineDistanceKm, verifyMechanicProfile } from '../services/mechanicService';
 import { getBrowserLocation, watchBrowserLocation, updateMechanicLocation } from '../services/locationService';
 import { fetchProfile } from '../services/authService';
@@ -11,7 +11,7 @@ import LiveChat from './LiveChat';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function MechanicDashboard() {
-  const { user, addToast } = useAuth();
+  const { user, profile, addToast } = useAuth();
   const { t } = useLanguage();
   const { requests: available, loading: loadingAvailable, reload: reloadAvailable } = useAvailableRequests();
   const { requests: myRequests, reload: reloadMine } = useMechanicRequests(user?.id);
@@ -25,6 +25,8 @@ export default function MechanicDashboard() {
   const [veriffStep, setVeriffStep] = useState(0);
   const [activeJob, setActiveJob] = useState(null);
   const [declinedIds, setDeclinedIds] = useState(new Set());
+  const [biddingCardId, setBiddingCardId] = useState(null);
+  const [customBidAmounts, setCustomBidAmounts] = useState({});
   const stopWatchRef = useRef(null);
 
   const activeRequest = (activeJob && !['CANCELLED'].includes(activeJob.status?.toUpperCase()) ? activeJob : null)
@@ -172,6 +174,25 @@ export default function MechanicDashboard() {
     addToast('Request dismissed from your board', 'info');
   };
 
+  const handleSendOffer = async (req, amount) => {
+    const finalAmount = Number(amount) || Number(req.budget);
+    try {
+      await submitMechanicOffer(req.id, {
+        mechanic_id: user.id,
+        mechanic_name: profile?.name || user?.name || user?.email?.split('@')[0] || 'Mechanic Marcus',
+        mechanic_phone: profile?.phone || user?.phone || '0300-1112223',
+        rating: mechProfile?.rating || '4.9',
+        distance_km: req._distanceKm || 1.5,
+        price: finalAmount
+      });
+      addToast(`Offer of ${formatPKR(finalAmount)} sent to client!`, 'success');
+      setBiddingCardId(null);
+      reloadAvailable();
+    } catch (err) {
+      addToast(err.message || 'Failed to submit offer', 'error');
+    }
+  };
+
   const handleStatusChange = async (newStatus) => {
     try {
       const reqId = activeRequest?.id || activeRequestId;
@@ -305,24 +326,124 @@ export default function MechanicDashboard() {
                       <div><strong>{t('Payment:')}</strong> {t(req.payment_method)}</div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleDeclineAvailable(req.id)}
-                      className="btn btn-outline"
-                      style={{ flex: '1', padding: '0.6rem', fontSize: '0.8rem', borderRadius: 'var(--radius-sm)' }}
-                    >
-                      {t('decline_request')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAccept(req.id)}
-                      className="btn btn-primary"
-                      style={{ flex: '2', padding: '0.6rem', fontSize: '0.85rem', fontWeight: 700, borderRadius: 'var(--radius-sm)' }}
-                    >
-                      {t('accept_job')}
-                    </button>
-                  </div>
+                  {(() => {
+                    const myOffer = (req.offers || []).find((o) => o.mechanic_id === user.id);
+                    const isBidding = biddingCardId === req.id;
+                    const basePrice = Number(req.budget) || 2500;
+                    const currentBid = customBidAmounts[req.id] != null ? customBidAmounts[req.id] : basePrice;
+
+                    if (myOffer) {
+                      return (
+                        <div style={{
+                          background: 'rgba(16, 185, 129, 0.08)',
+                          border: '1.5px solid var(--success)',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '0.75rem',
+                          textAlign: 'center',
+                          marginTop: '0.75rem'
+                        }}>
+                          <strong style={{ color: 'var(--success)', fontSize: '0.85rem', display: 'block' }}>
+                            ✅ {t('offer_sent_waiting')}
+                          </strong>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '0.25rem', display: 'block' }}>
+                            {formatPKR(myOffer.price)}
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    if (isBidding) {
+                      return (
+                        <div style={{
+                          marginTop: '0.75rem',
+                          padding: '0.85rem',
+                          background: 'var(--bg-main)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: 'var(--radius-sm)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.6rem'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                              {t('offer_different_price')}
+                            </span>
+                            <span style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--primary)' }}>
+                              {formatPKR(currentBid)}
+                            </span>
+                          </div>
+
+                          {/* Quick Increment Buttons */}
+                          <div style={{ display: 'flex', gap: '0.35rem' }}>
+                            {[-500, +500, +1000, +1500].map((inc) => (
+                              <button
+                                key={inc}
+                                type="button"
+                                onClick={() => setCustomBidAmounts((prev) => ({ ...prev, [req.id]: Math.max(500, currentBid + inc) }))}
+                                className="btn btn-outline"
+                                style={{ flex: 1, padding: '0.25rem 0.35rem', fontSize: '0.7rem', fontWeight: 700 }}
+                              >
+                                {inc > 0 ? `+${inc}` : inc}
+                              </button>
+                            ))}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                            <button
+                              type="button"
+                              onClick={() => setBiddingCardId(null)}
+                              className="btn btn-outline"
+                              style={{ flex: 1, padding: '0.45rem', fontSize: '0.75rem' }}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSendOffer(req, currentBid)}
+                              className="btn btn-primary"
+                              style={{ flex: 2, padding: '0.45rem', fontSize: '0.75rem', fontWeight: 800 }}
+                            >
+                              🚀 {t('send_counter_offer')} ({formatPKR(currentBid)})
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleDeclineAvailable(req.id)}
+                            className="btn btn-outline"
+                            style={{ flex: '1', padding: '0.55rem', fontSize: '0.8rem', borderRadius: 'var(--radius-sm)' }}
+                          >
+                            {t('decline_request')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAccept(req.id)}
+                            className="btn btn-primary"
+                            style={{ flex: '2', padding: '0.55rem', fontSize: '0.85rem', fontWeight: 700, borderRadius: 'var(--radius-sm)' }}
+                          >
+                            ⚡ {t('accept_job')} ({formatPKR(req.budget)})
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBiddingCardId(req.id);
+                            setCustomBidAmounts((prev) => ({ ...prev, [req.id]: basePrice }));
+                          }}
+                          className="btn btn-outline"
+                          style={{ width: '100%', padding: '0.4rem', fontSize: '0.75rem', borderColor: 'var(--secondary)', color: 'var(--secondary)' }}
+                        >
+                          💬 {t('offer_different_price')}
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>

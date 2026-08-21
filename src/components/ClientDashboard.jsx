@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useClientRequests } from '../hooks/useRequests';
-import { createRequest, cancelRequest, clearRequestHistory } from '../services/requestService';
+import { createRequest, cancelRequest, clearRequestHistory, acceptMechanicOffer } from '../services/requestService';
 import { getBrowserLocation, subscribeToMechanicLocation } from '../services/locationService';
 import { reverseGeocode } from '../services/routingService';
 import { fetchProfile } from '../services/authService';
@@ -10,6 +10,7 @@ import RealMap from './RealMap';
 import LiveChat from './LiveChat';
 import { useLanguage } from '../context/LanguageContext';
 import { BRAND_DEALERSHIP_POLICIES } from '../data/dealershipData';
+import { getEstimatedPriceRange } from '../data/pricingEstimator';
 
 export default function ClientDashboard() {
   const { user, profile, addToast } = useAuth();
@@ -49,6 +50,32 @@ export default function ClientDashboard() {
 
   const activeRequest = requests.find((r) => r.id === activeRequestId && !['CANCELLED'].includes(r.status?.toUpperCase()));
   const statusUpper = activeRequest?.status ? activeRequest.status.toUpperCase() : 'PENDING';
+
+  // Calculate dynamic fair market price range
+  const priceEstimate = getEstimatedPriceRange(
+    breakdownType,
+    serviceType,
+    vehicleMake === 'Other' ? customVehicleMake : vehicleMake,
+    isAccident
+  );
+
+  // Automatically pre-populate budget with the suggested fair market price
+  React.useEffect(() => {
+    if (priceEstimate?.suggested) {
+      setBudget(String(priceEstimate.suggested));
+    }
+  }, [breakdownType, serviceType, vehicleMake, customVehicleMake, isAccident]);
+
+  const handleAcceptOffer = async (offer) => {
+    if (!activeRequest?.id || !offer) return;
+    try {
+      await acceptMechanicOffer(activeRequest.id, offer);
+      addToast(`Accepted offer from ${offer.mechanic_name || 'Mechanic'} for Rs. ${Number(offer.price).toLocaleString('en-PK')}!`, 'success');
+      reload();
+    } catch (err) {
+      addToast(err.message || 'Failed to accept offer', 'error');
+    }
+  };
 
   // Automatically show rating & review modal when job completes
   React.useEffect(() => {
@@ -499,6 +526,36 @@ export default function ClientDashboard() {
                 )}
               </div>
 
+              {/* Dynamic Fair Market Price Estimator Banner */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(59, 130, 246, 0.08))',
+                border: '1.5px solid rgba(16, 185, 129, 0.35)',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.85rem 1rem',
+                marginBottom: '1.25rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '0.75rem'
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    💡 {t('market_estimate_badge')}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.2rem' }}>
+                    {language === 'ur' ? priceEstimate.titleUr : priceEstimate.titleEn}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                    {t('fair_price_recommendation')}: <strong style={{ color: 'var(--text-main)' }}>{formatPKR(priceEstimate.min)} – {formatPKR(priceEstimate.max)}</strong>
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>{t('suggested_price')}</span>
+                  <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--success)' }}>{formatPKR(priceEstimate.suggested)}</span>
+                </div>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
                   <label>{t('your_budget')}</label>
@@ -812,24 +869,89 @@ export default function ClientDashboard() {
             <div style={{ flexGrow: 1 }}>
               {statusUpper === 'PENDING' ? (
                 <div className="glass-panel" style={{
-                  padding: '2.5rem 1.5rem',
+                  padding: '1.5rem',
                   background: 'var(--bg-card)',
-                  textAlign: 'center',
                   borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--border-color)',
                   display: 'flex',
                   flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minHeight: '260px'
+                  gap: '1rem',
+                  minHeight: '300px'
                 }}>
-                  <div style={{ fontSize: '2.25rem', marginBottom: '0.75rem' }}>⏳</div>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.35rem', color: 'var(--text-main)' }}>
-                    {t('chat_locked_title')}
-                  </h4>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '300px', lineHeight: '1.5', margin: 0 }}>
-                    {t('chat_locked_sub')}
-                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="pulse-indicator" style={{ background: 'var(--secondary)' }}></span>
+                      <strong style={{ fontSize: '0.95rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {t('incoming_offers_title')}
+                      </strong>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {(activeRequest.offers || []).length} {t('offers') || 'offers'}
+                    </span>
+                  </div>
+
+                  {(!activeRequest.offers || activeRequest.offers.length === 0) ? (
+                    <div style={{ padding: '2rem 1rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📡</div>
+                      <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.35rem', color: 'var(--text-main)' }}>
+                        Broadcasting to Nearby Mechanics...
+                      </h4>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '340px', lineHeight: '1.5', margin: 0 }}>
+                        {t('no_offers_yet')}
+                      </p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {activeRequest.offers.map((offer) => (
+                        <div
+                          key={offer.id}
+                          className="glass-panel"
+                          style={{
+                            padding: '1rem 1.25rem',
+                            background: 'var(--bg-main)',
+                            border: '1.5px solid var(--border-color)',
+                            borderRadius: 'var(--radius-md)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '0.75rem'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--secondary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.1rem' }}>
+                              {offer.mechanic_name ? offer.mechanic_name[0].toUpperCase() : 'M'}
+                            </div>
+                            <div>
+                              <strong style={{ fontSize: '0.95rem', display: 'block', color: 'var(--text-main)' }}>
+                                {offer.mechanic_name || 'Mechanic'}
+                              </strong>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                ⭐ {offer.rating || '4.9'} • {offer.distance_km ? `${offer.distance_km.toFixed(1)} km away` : 'Nearby verified mechanic'}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--success)' }}>
+                                {formatPKR(offer.price)}
+                              </div>
+                              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Offered Fare</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleAcceptOffer(offer)}
+                              className="btn btn-primary"
+                              style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              ✅ {t('accept_offer_btn')}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <LiveChat

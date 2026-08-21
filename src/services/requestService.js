@@ -291,3 +291,71 @@ export async function clearRequestHistory() {
 
   return filtered;
 }
+
+/** Submit a custom counter-offer / bid from a mechanic for an open request */
+export async function submitMechanicOffer(requestId, offerData) {
+  const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+  const idx = local.findIndex((r) => String(r.id) === String(requestId));
+  if (idx < 0) throw new Error('Request not found');
+
+  const currentReq = local[idx];
+  const offers = Array.isArray(currentReq.offers) ? [...currentReq.offers] : [];
+  
+  const existingOfferIdx = offers.findIndex((o) => o.mechanic_id === offerData.mechanic_id);
+  const newOffer = {
+    id: `offer_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    created_at: new Date().toISOString(),
+    ...offerData
+  };
+
+  if (existingOfferIdx >= 0) {
+    offers[existingOfferIdx] = newOffer;
+  } else {
+    offers.push(newOffer);
+  }
+
+  const updatedReq = {
+    ...currentReq,
+    offers,
+    updated_at: new Date().toISOString()
+  };
+
+  local[idx] = updatedReq;
+  localStorage.setItem('mock_service_requests', JSON.stringify(local));
+  await syncCloudRequest(updatedReq);
+  return updatedReq;
+}
+
+/** Client accepts an InDrive-style mechanic offer */
+export async function acceptMechanicOffer(requestId, offer) {
+  const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+  const idx = local.findIndex((r) => String(r.id) === String(requestId));
+  if (idx < 0) throw new Error('Request not found');
+
+  const currentReq = local[idx];
+  const updatedReq = {
+    ...currentReq,
+    mechanic_id: offer.mechanic_id,
+    mechanic_name: offer.mechanic_name || 'Mechanic',
+    budget: Number(offer.price) || currentReq.budget,
+    status: 'ACCEPTED',
+    accepted_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  local[idx] = updatedReq;
+  localStorage.setItem('mock_service_requests', JSON.stringify(local));
+
+  // Set mechanic profile status to BUSY
+  try {
+    const mechProfiles = JSON.parse(localStorage.getItem('mock_mechanic_profiles') || '[]');
+    const mIdx = mechProfiles.findIndex(m => m.user_id === offer.mechanic_id);
+    if (mIdx >= 0) {
+      mechProfiles[mIdx].status = 'BUSY';
+      localStorage.setItem('mock_mechanic_profiles', JSON.stringify(mechProfiles));
+    }
+  } catch (e) {}
+
+  await syncCloudRequest(updatedReq);
+  return updatedReq;
+}
