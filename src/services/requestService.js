@@ -315,31 +315,21 @@ export function subscribeToAvailableRequests(onInsert) {
   return () => supabase.removeChannel(channel);
 }
 
-/** Clear all completed and cancelled requests from local storage and cloud store */
+/** Wipe all request history from local storage and server */
 export async function clearRequestHistory() {
-  const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
-  const filtered = local.filter((r) => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()));
-  localStorage.setItem('mock_service_requests', JSON.stringify(filtered));
-
+  localStorage.setItem('mock_service_requests', JSON.stringify([]));
+  localStorage.setItem('mock_messages', JSON.stringify([]));
   try {
-    const STORE_URL = 'https://api.restful-api.dev/objects/ff8081819ff5b11001a022a3eb4d6778';
-    const res = await fetch(STORE_URL);
-    let cloudMessages = [];
-    if (res.ok) {
-      const json = await res.json();
-      cloudMessages = json?.data?.messages || [];
-    }
-    await fetch(STORE_URL, {
-      method: 'PUT',
+    const API_URL = typeof window !== 'undefined' ? `${window.location.origin}/api/sync` : '/api/sync';
+    await fetch(API_URL, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'AutoRescue_Requests_Store',
-        data: { requests: filtered, messages: cloudMessages }
-      }),
+      body: JSON.stringify({ action: 'CLEAR_ALL' })
     });
   } catch (e) {}
-
-  return filtered;
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('storage'));
+  }
 }
 
 /** Submit a custom counter-offer / bid from a mechanic for an open request */
@@ -412,3 +402,4 @@ export async function acceptMechanicOffer(requestId, offer) {
   await syncCloudRequest(updatedReq);
   return updatedReq;
 }
+

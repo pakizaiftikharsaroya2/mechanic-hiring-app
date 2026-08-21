@@ -26,9 +26,10 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
 
-    if (body.action === 'CLEAR_HISTORY') {
-      globalRequests = globalRequests.filter(r => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()));
-      return res.status(200).json({ requests: globalRequests, messages: globalMessages });
+    if (body.action === 'CLEAR_ALL' || body.action === 'CLEAR_HISTORY') {
+      globalRequests = [];
+      globalMessages = [];
+      return res.status(200).json({ requests: [], messages: [] });
     }
 
     if (body.type === 'SYNC_REQUEST' && body.data) {

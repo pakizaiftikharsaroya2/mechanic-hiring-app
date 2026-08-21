@@ -598,12 +598,12 @@ export default function ClientDashboard() {
               <h3 style={{ fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
                 {t('your_requests')}
               </h3>
-              {requests.some((r) => ['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase())) && (
+              {requests.length > 0 && (
                 <button
                   type="button"
                   onClick={async () => {
                     await clearRequestHistory();
-                    addToast('Request history cleared', 'success');
+                    addToast('All request history cleared from server & device', 'success');
                     reload();
                   }}
                   className="btn btn-outline"

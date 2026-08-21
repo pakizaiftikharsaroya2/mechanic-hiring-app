@@ -10,12 +10,15 @@ import MechanicDashboard from './components/MechanicDashboard';
 import Profile from './pages/Profile';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
-// Clean up any test ghosts from old sessions
+// Auto-purge stale test requests from old testing sessions
 try {
-  const stored = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
-  const validOnly = stored.filter((r) => r && r.id && r.id !== 'req_demo1');
-  if (validOnly.length !== stored.length) {
-    localStorage.setItem('mock_service_requests', JSON.stringify(validOnly));
+  if (typeof window !== 'undefined') {
+    const hasPurgedV2 = localStorage.getItem('autorescue_purged_v2');
+    if (!hasPurgedV2) {
+      localStorage.setItem('mock_service_requests', JSON.stringify([]));
+      localStorage.setItem('mock_messages', JSON.stringify([]));
+      localStorage.setItem('autorescue_purged_v2', 'true');
+    }
   }
 } catch (e) {}
 
