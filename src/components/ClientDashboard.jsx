@@ -48,7 +48,7 @@ export default function ClientDashboard() {
   const [selectedTip, setSelectedTip] = useState(0);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
-  const activeRequest = requests.find((r) => r.id === activeRequestId && !['CANCELLED'].includes(r.status?.toUpperCase()));
+  const activeRequest = requests.find((r) => r.id === activeRequestId && !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()));
   const isClaimed = Boolean(activeRequest?.mechanic_id);
   const statusUpper = isClaimed && (!activeRequest?.status || activeRequest.status?.toUpperCase() === 'PENDING')
     ? 'ACCEPTED'
