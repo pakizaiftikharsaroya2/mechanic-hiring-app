@@ -494,8 +494,10 @@ export default function MechanicDashboard() {
               <button
                 type="button"
                 onClick={async () => {
+                  setActiveJob(null);
+                  setActiveRequestId(null);
                   await clearRequestHistory();
-                  addToast('Job history cleared', 'success');
+                  addToast('History cleared', 'success');
                   reloadMine();
                 }}
                 className="btn btn-outline"

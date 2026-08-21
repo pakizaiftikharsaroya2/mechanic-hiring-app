@@ -315,19 +315,27 @@ export function subscribeToAvailableRequests(onInsert) {
   return () => supabase.removeChannel(channel);
 }
 
-/** Wipe all request history from local storage and server */
+/** Wipe all request history completely from local storage, broadcast channels, and server */
 export async function clearRequestHistory() {
   localStorage.setItem('mock_service_requests', JSON.stringify([]));
   localStorage.setItem('mock_messages', JSON.stringify([]));
+  
   try {
     const API_URL = typeof window !== 'undefined' ? `${window.location.origin}/api/sync` : '/api/sync';
     await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'CLEAR_ALL' })
+      body: JSON.stringify({ action: 'CLEAR_ALL', requests: [], messages: [] })
     });
   } catch (e) {}
+
   if (typeof window !== 'undefined') {
+    if (window.BroadcastChannel) {
+      try {
+        const bc = new BroadcastChannel('autorescue_native_sync_v9');
+        bc.postMessage({ type: 'SYNC_REQUEST', data: [] });
+      } catch (e) {}
+    }
     window.dispatchEvent(new Event('storage'));
   }
 }

@@ -619,8 +619,9 @@ export default function ClientDashboard() {
                 <button
                   type="button"
                   onClick={async () => {
+                    setActiveRequestId(null);
                     await clearRequestHistory();
-                    addToast('All request history cleared from server & device', 'success');
+                    addToast('History cleared', 'success');
                     reload();
                   }}
                   className="btn btn-outline"
