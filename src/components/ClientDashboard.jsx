@@ -780,12 +780,35 @@ export default function ClientDashboard() {
             </div>
 
             <div style={{ flexGrow: 1 }}>
-              <LiveChat
-                requestId={activeRequest.id}
-                currentUserId={user.id}
-                otherPartyName={mechanicProfile?.name || 'Mechanic Muhammad'}
-                role="client"
-              />
+              {statusUpper === 'PENDING' ? (
+                <div className="glass-panel" style={{
+                  padding: '2.5rem 1.5rem',
+                  background: 'var(--bg-card)',
+                  textAlign: 'center',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-color)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: '260px'
+                }}>
+                  <div style={{ fontSize: '2.25rem', marginBottom: '0.75rem' }}>⏳</div>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.35rem', color: 'var(--text-main)' }}>
+                    {t('chat_locked_title')}
+                  </h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '300px', lineHeight: '1.5', margin: 0 }}>
+                    {t('chat_locked_sub')}
+                  </p>
+                </div>
+              ) : (
+                <LiveChat
+                  requestId={activeRequest.id}
+                  currentUserId={user.id}
+                  otherPartyName={mechanicProfile?.name || 'Mechanic Muhammad'}
+                  role="client"
+                />
+              )}
             </div>
           </div>
         </div>

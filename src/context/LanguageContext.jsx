@@ -435,6 +435,8 @@ const translations = {
     "Request Cancelled": "Request Cancelled",
     "This request was cancelled. You can request again with the same vehicle & location details.": "This request was cancelled. You can request again with the same vehicle & location details.",
     "clear_history": "Clear History",
+    "chat_locked_title": "Live Chat Locked",
+    "chat_locked_sub": "Direct messaging unlocks automatically once a nearby mechanic accepts your roadside request.",
     
     // Mechanic Dispatch Console
     "incoming_requests": "Incoming Requests",
@@ -877,6 +879,8 @@ const translations = {
     "Request Cancelled": "درخواست منسوخ کر دی گئی ہے",
     "This request was cancelled. You can request again with the same vehicle & location details.": "یہ درخواست منسوخ ہو چکی ہے۔ آپ اسی گاڑی اور لوکیشن کے ساتھ دوبارہ درخواست بھیج سکتے ہیں۔",
     "clear_history": "ہسٹری صاف کریں",
+    "chat_locked_title": "لائیو چیٹ مقفل ہے",
+    "chat_locked_sub": "قریبی مکینک کی جانب سے درخواست قبول کرنے پر براہ راست رابطہ خود بخود کھل جائے گا۔",
 
     // Mechanic Dispatch Console
     "incoming_requests": "موصول شدہ درخواستیں",
