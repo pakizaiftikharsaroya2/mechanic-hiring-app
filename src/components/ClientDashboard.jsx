@@ -50,8 +50,17 @@ export default function ClientDashboard() {
   const [selectedTip, setSelectedTip] = useState(0);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
-  const activeRequest = (activeRequestId && requests.find((r) => r.id === activeRequestId && !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase())))
-    || requests.find((r) => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase())) || null;
+  const [dismissedActiveIds, setDismissedActiveIds] = useState(() => {
+    try {
+      return new Set(JSON.parse(sessionStorage.getItem('client_dismissed_active_reqs') || '[]'));
+    } catch (e) {
+      return new Set();
+    }
+  });
+
+  const activeRequest = (activeRequestId && requests.find((r) => r.id === activeRequestId && !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()) && !dismissedActiveIds.has(r.id)))
+    || requests.find((r) => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()) && !dismissedActiveIds.has(r.id))
+    || null;
 
   const isClaimed = Boolean(activeRequest?.mechanic_id);
   const statusUpper = activeRequest?.status ? activeRequest.status.toUpperCase() : (isClaimed ? 'ACCEPTED' : 'PENDING');
@@ -121,23 +130,21 @@ export default function ClientDashboard() {
     setOtherReasonText('');
   };
 
-  const hasUserDismissedRef = React.useRef(false);
-
-  // Automatically keep ongoing active request open on initial load unless dismissed
-  React.useEffect(() => {
-    if (hasUserDismissedRef.current || !requests || requests.length === 0) return;
-    const latestActive = requests.find(r => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()));
-    if (latestActive) {
-      setActiveRequestId(latestActive.id);
-    } else {
-      setActiveRequestId(null);
+  const handleDismissActiveRequest = (reqToDismiss) => {
+    const idToDismiss = reqToDismiss?.id || activeRequest?.id || activeRequestId;
+    if (idToDismiss) {
+      setDismissedActiveIds((prev) => {
+        const next = new Set(prev);
+        next.add(idToDismiss);
+        try {
+          sessionStorage.setItem('client_dismissed_active_reqs', JSON.stringify([...next]));
+        } catch (e) {}
+        return next;
+      });
     }
-  }, [requests]);
-
-  const handleDismissActiveRequest = () => {
     resetRequestForm();
-    hasUserDismissedRef.current = true;
     setActiveRequestId(null);
+    addToast('Returned to request assistance form', 'info');
   };
 
   // Load the assigned mechanic's profile + last known position once one is
