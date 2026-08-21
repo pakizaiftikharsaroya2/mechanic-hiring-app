@@ -35,9 +35,33 @@ export default function MechanicDashboard() {
   const [customBidAmounts, setCustomBidAmounts] = useState({});
   const stopWatchRef = useRef(null);
 
-  const activeRequest = (activeJob && !['CANCELLED', 'COMPLETED'].includes(activeJob.status?.toUpperCase()) ? activeJob : null)
-    || (activeRequestId && myRequests.find((r) => r.id === activeRequestId && ['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(r.status?.toUpperCase())))
-    || myRequests.find((r) => ['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(r.status?.toUpperCase()));
+  // Permanently track completed/cancelled job IDs so they never re-appear as active
+  const [doneJobIds, setDoneJobIds] = useState(() => {
+    try { return new Set(JSON.parse(sessionStorage.getItem('mech_done_job_ids') || '[]')); }
+    catch (e) { return new Set(); }
+  });
+
+  const markJobDone = (id) => {
+    if (!id) return;
+    setDoneJobIds((prev) => {
+      const next = new Set(prev);
+      next.add(String(id));
+      try { sessionStorage.setItem('mech_done_job_ids', JSON.stringify([...next])); } catch (e) {}
+      return next;
+    });
+    // Also tombstone it so clear-history keeps it gone
+    try {
+      const current = JSON.parse(localStorage.getItem('autorescue_tombstoned_ids') || '[]');
+      if (!current.includes(String(id))) {
+        localStorage.setItem('autorescue_tombstoned_ids', JSON.stringify([...current, String(id)]));
+      }
+    } catch (e) {}
+  };
+
+  const activeRequest =
+    (activeJob && !['CANCELLED', 'COMPLETED'].includes(activeJob.status?.toUpperCase()) && !doneJobIds.has(String(activeJob.id)) ? activeJob : null)
+    || (activeRequestId && myRequests.find((r) => r.id === activeRequestId && ['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(r.status?.toUpperCase()) && !doneJobIds.has(String(r.id))))
+    || myRequests.find((r) => ['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(r.status?.toUpperCase()) && !doneJobIds.has(String(r.id))) || null;
 
   // Live listener to instantly detect when the client cancels the active job
   useEffect(() => {
@@ -235,6 +259,7 @@ export default function MechanicDashboard() {
     // Instant UI reaction
     addToast(`Status updated to ${newStatus.replace('_', ' ')}`, 'success');
     if (newStatus === 'COMPLETED' || newStatus === 'CANCELLED') {
+      markJobDone(reqId);
       setActiveJob(null);
       setActiveRequestId(null);
       setMechProfile((prev) => (prev ? { ...prev, status: 'ONLINE' } : prev));
@@ -507,6 +532,16 @@ export default function MechanicDashboard() {
                 onClick={async () => {
                   setActiveJob(null);
                   setActiveRequestId(null);
+                  // Tombstone all done/cancelled job IDs before clearing
+                  const completedIds = myRequests
+                    .filter(r => ['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()))
+                    .map(r => String(r.id));
+                  if (completedIds.length > 0) {
+                    const current = JSON.parse(localStorage.getItem('autorescue_tombstoned_ids') || '[]');
+                    localStorage.setItem('autorescue_tombstoned_ids', JSON.stringify([...new Set([...current, ...completedIds])]));
+                  }
+                  setDoneJobIds(new Set());
+                  try { sessionStorage.removeItem('mech_done_job_ids'); } catch (e) {}
                   await clearRequestHistory();
                   addToast('History cleared', 'success');
                   reloadMine();

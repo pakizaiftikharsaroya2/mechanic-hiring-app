@@ -81,10 +81,16 @@ export async function fetchAvailableRequests() {
 
 /** Requests currently assigned to the logged-in mechanic (active + history). */
 export async function fetchMechanicRequests(mechanicId) {
+  const tombstones = new Set(JSON.parse(localStorage.getItem('autorescue_tombstoned_ids') || '[]'));
+  const lastClearedAt = Number(localStorage.getItem('autorescue_last_cleared_at') || 0);
+  const isAlive = (r) =>
+    !tombstones.has(String(r.id)) &&
+    new Date(r.created_at || 0).getTime() >= lastClearedAt;
+
   if (isMock) {
     const all = await fetchAllCloudRequests();
     if (!mechanicId) return [];
-    return (all || []).filter((r) => String(r.mechanic_id) === String(mechanicId));
+    return (all || []).filter((r) => String(r.mechanic_id) === String(mechanicId) && isAlive(r));
   }
   const { data, error } = await supabase
     .from('service_requests')
@@ -92,7 +98,7 @@ export async function fetchMechanicRequests(mechanicId) {
     .order('created_at', { ascending: false });
   if (error) throw error;
   if (!mechanicId) return [];
-  return (data || []).filter(r => r.mechanic_id === mechanicId);
+  return (data || []).filter(r => r.mechanic_id === mechanicId && isAlive(r));
 }
 
 export async function fetchRequestById(requestId) {

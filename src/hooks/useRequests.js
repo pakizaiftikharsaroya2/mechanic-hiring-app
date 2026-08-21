@@ -179,7 +179,7 @@ export function useMechanicRequests(mechanicId) {
     reload();
     // Cross-tab & multi-window instant sync
     const handleStorage = (e) => {
-      if (!e.key || e.key.includes('service_requests')) reload();
+      if (!e.key || e.key.includes('service_requests') || e.key.includes('autorescue_')) reload();
     };
     window.addEventListener('storage', handleStorage);
     const interval = setInterval(reload, 400);
@@ -188,7 +188,16 @@ export function useMechanicRequests(mechanicId) {
     const unsubCloud = subscribeCloudEvents((event) => {
       if (event.type === 'SYNC_REQUEST') {
         if (Array.isArray(event.data)) {
-          const filtered = mechanicId ? event.data.filter(r => String(r.mechanic_id) === String(mechanicId)) : [];
+          const tombstones = new Set(JSON.parse(localStorage.getItem('autorescue_tombstoned_ids') || '[]'));
+          const lastClearedAt = Number(localStorage.getItem('autorescue_last_cleared_at') || 0);
+          const filtered = event.data.filter(r =>
+            mechanicId
+              ? String(r.mechanic_id) === String(mechanicId)
+              : false
+          ).filter(r =>
+            !tombstones.has(String(r.id)) &&
+            new Date(r.created_at || 0).getTime() >= lastClearedAt
+          );
           setRequests(filtered);
         }
         reload();
