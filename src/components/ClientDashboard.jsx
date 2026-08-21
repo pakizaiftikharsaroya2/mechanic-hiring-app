@@ -12,7 +12,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { BRAND_DEALERSHIP_POLICIES } from '../data/dealershipData';
 
 export default function ClientDashboard() {
-  const { user, addToast } = useAuth();
+  const { user, profile, addToast } = useAuth();
   const { t, language } = useLanguage();
   const { requests, loading, reload } = useClientRequests(user?.id);
   const [activeRequestId, setActiveRequestId] = useState(null);
