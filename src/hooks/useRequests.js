@@ -39,7 +39,7 @@ export function useClientRequests(clientId) {
     const unsubCloud = subscribeCloudEvents((event) => {
       if (event.type === 'SYNC_REQUEST') {
         if (Array.isArray(event.data)) {
-          const filtered = clientId ? event.data.filter(r => String(r.client_id) === String(clientId) || !r.client_id) : event.data;
+          const filtered = clientId ? event.data.filter(r => String(r.client_id) === String(clientId)) : [];
           setRequests(filtered);
         }
         reload();
