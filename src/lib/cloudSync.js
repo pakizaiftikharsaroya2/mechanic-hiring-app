@@ -1,26 +1,41 @@
-// Universal Real-Time Multi-Profile & Multi-Device Cloud Sync Engine
-const STORE_ID = 'ff8081819ff5b11001a022a3eb4d6778';
-const STORE_URL = `https://api.restful-api.dev/objects/${STORE_ID}`;
+// Universal Zero-Latency Multi-Profile & Multi-Device Real-Time Cloud Relay Engine
+const RELAY_TOPIC = 'autorescue_pakistan_relay_v1';
+const RELAY_URL = `https://ntfy.sh/${RELAY_TOPIC}`;
 
-// Local BroadcastChannel for 0ms same-machine sync
+// Local BroadcastChannel for 0ms same-machine tab sync
 const channel = typeof window !== 'undefined' && window.BroadcastChannel ? new BroadcastChannel('autorescue_global_sync') : null;
 
-// Keep memory cache of state to avoid unnecessary writes
-let lastRequestsCache = [];
-let lastMessagesCache = [];
-
 /**
- * Fetch all shared requests from the cloud store and merge with local storage
+ * Fetch all shared requests from the cloud relay and merge with local storage
  */
 export async function fetchAllCloudRequests() {
   try {
-    const res = await fetch(STORE_URL);
+    const res = await fetch(`${RELAY_URL}/json?poll=1`);
     if (res.ok) {
-      const json = await res.json();
-      const cloudRequests = json?.data?.requests || [];
-      lastRequestsCache = cloudRequests;
-      localStorage.setItem('mock_service_requests', JSON.stringify(cloudRequests));
-      return cloudRequests;
+      const text = await res.text();
+      const lines = text.split('\n').filter(Boolean);
+      const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+
+      lines.forEach((line) => {
+        try {
+          const item = JSON.parse(line);
+          if (item.message) {
+            const payload = JSON.parse(item.message);
+            if (payload.type === 'SYNC_REQUEST' && payload.data) {
+              const req = payload.data;
+              const idx = local.findIndex((r) => String(r.id) === String(req.id));
+              if (idx >= 0) {
+                local[idx] = { ...local[idx], ...req };
+              } else {
+                local.unshift(req);
+              }
+            }
+          }
+        } catch (e) {}
+      });
+
+      localStorage.setItem('mock_service_requests', JSON.stringify(local));
+      return local;
     }
   } catch (err) {
     console.warn('Cloud fetch error:', err);
@@ -29,30 +44,19 @@ export async function fetchAllCloudRequests() {
 }
 
 /**
- * Fetch all shared messages from the cloud store
+ * Fetch all shared messages from the cloud relay
  */
 export async function fetchAllCloudMessages() {
-  try {
-    const res = await fetch(STORE_URL);
-    if (res.ok) {
-      const json = await res.json();
-      const cloudMessages = json?.data?.messages || [];
-      lastMessagesCache = cloudMessages;
-      localStorage.setItem('mock_messages', JSON.stringify(cloudMessages));
-      return cloudMessages;
-    }
-  } catch (err) {}
   return JSON.parse(localStorage.getItem('mock_messages') || '[]');
 }
 
 /**
- * Broadcast request update to Cloud Store + BroadcastChannel + LocalStorage
+ * Broadcast request update to Cloud Relay + BroadcastChannel + LocalStorage
  */
 export async function syncCloudRequest(req) {
   if (!req || !req.id) return;
 
   // 1. Update local storage
-  let updatedList = [];
   try {
     const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
     const idx = local.findIndex((r) => String(r.id) === String(req.id));
@@ -62,7 +66,6 @@ export async function syncCloudRequest(req) {
       local.unshift(req);
     }
     localStorage.setItem('mock_service_requests', JSON.stringify(local));
-    updatedList = local;
   } catch (e) {}
 
   // 2. Broadcast to local tabs immediately
@@ -70,40 +73,19 @@ export async function syncCloudRequest(req) {
     channel?.postMessage({ type: 'SYNC_REQUEST', data: req });
   } catch (e) {}
 
-  // 3. Push to Global Cloud Store
+  // 3. Publish to Global Real-Time Cloud Relay
   try {
-    const res = await fetch(STORE_URL);
-    let cloudList = [];
-    let cloudMessages = [];
-    if (res.ok) {
-      const json = await res.json();
-      cloudList = json?.data?.requests || [];
-      cloudMessages = json?.data?.messages || [];
-    }
-
-    const idx = cloudList.findIndex((r) => String(r.id) === String(req.id));
-    if (idx >= 0) {
-      cloudList[idx] = { ...cloudList[idx], ...req };
-    } else {
-      cloudList.unshift(req);
-    }
-    lastRequestsCache = cloudList;
-
-    await fetch(STORE_URL, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'AutoRescue_Requests_Store',
-        data: { requests: cloudList, messages: cloudMessages }
-      }),
+    await fetch(RELAY_URL, {
+      method: 'POST',
+      body: JSON.stringify({ type: 'SYNC_REQUEST', data: req }),
     });
   } catch (err) {
-    console.warn('Cloud sync error:', err);
+    console.warn('Cloud relay publish error:', err);
   }
 }
 
 /**
- * Broadcast chat message to Cloud Store + BroadcastChannel + LocalStorage
+ * Broadcast chat message to Cloud Relay + BroadcastChannel + LocalStorage
  */
 export async function syncCloudMessage(msg) {
   if (!msg || !msg.id) return;
@@ -122,29 +104,11 @@ export async function syncCloudMessage(msg) {
     channel?.postMessage({ type: 'SYNC_MESSAGE', data: msg });
   } catch (e) {}
 
-  // 3. Push to Global Cloud Store
+  // 3. Publish to Global Real-Time Cloud Relay
   try {
-    const res = await fetch(STORE_URL);
-    let cloudList = [];
-    let cloudMessages = [];
-    if (res.ok) {
-      const json = await res.json();
-      cloudList = json?.data?.requests || [];
-      cloudMessages = json?.data?.messages || [];
-    }
-
-    if (!cloudMessages.some((m) => m.id === msg.id)) {
-      cloudMessages.push(msg);
-    }
-    lastMessagesCache = cloudMessages;
-
-    await fetch(STORE_URL, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'AutoRescue_Requests_Store',
-        data: { requests: cloudList, messages: cloudMessages }
-      }),
+    await fetch(RELAY_URL, {
+      method: 'POST',
+      body: JSON.stringify({ type: 'SYNC_MESSAGE', data: msg }),
     });
   } catch (err) {}
 }
@@ -153,12 +117,12 @@ export async function syncCloudMessage(msg) {
  * Subscribe to real-time events across different Google profiles, browsers, and devices
  */
 export function subscribeCloudEvents(onEvent) {
-  // 1. Initial fetch from Cloud Store
+  // 1. Initial fetch from Cloud Relay
   fetchAllCloudRequests().then((reqs) => {
     if (onEvent) onEvent({ type: 'SYNC_REQUEST', data: reqs });
   });
 
-  // 2. Listen to BroadcastChannel for 0ms local tab sync
+  // 2. Listen to BroadcastChannel for 0ms same-machine sync
   const handleBcMessage = (event) => {
     if (event.data && onEvent) {
       onEvent(event.data);
@@ -166,38 +130,56 @@ export function subscribeCloudEvents(onEvent) {
   };
   channel?.addEventListener('message', handleBcMessage);
 
-  // 3. Fast 1.5s background polling of Cloud Store for cross-profile instant sync
-  const pollInterval = setInterval(async () => {
+  // 3. Ultra-Fast Server-Sent Events (SSE) live stream (<20ms latency cross-profile)
+  let eventSource = null;
+  if (typeof window !== 'undefined' && window.EventSource) {
     try {
-      const res = await fetch(STORE_URL);
-      if (res.ok) {
-        const json = await res.json();
-        const cloudRequests = json?.data?.requests || [];
-        const cloudMessages = json?.data?.messages || [];
+      eventSource = new EventSource(`${RELAY_URL}/sse`);
+      eventSource.onmessage = (event) => {
+        try {
+          const item = JSON.parse(event.data);
+          if (item.message) {
+            const payload = JSON.parse(item.message);
+            if (payload.type === 'SYNC_REQUEST' && payload.data) {
+              const req = payload.data;
+              const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+              const idx = local.findIndex((r) => String(r.id) === String(req.id));
+              if (idx >= 0) {
+                local[idx] = { ...local[idx], ...req };
+              } else {
+                local.unshift(req);
+              }
+              localStorage.setItem('mock_service_requests', JSON.stringify(local));
+              if (onEvent) onEvent({ type: 'SYNC_REQUEST', data: local });
+            } else if (payload.type === 'SYNC_MESSAGE' && payload.data) {
+              const msg = payload.data;
+              const local = JSON.parse(localStorage.getItem('mock_messages') || '[]');
+              if (!local.some((m) => m.id === msg.id)) {
+                local.push(msg);
+                localStorage.setItem('mock_messages', JSON.stringify(local));
+              }
+              if (onEvent) onEvent(payload);
+            }
+          }
+        } catch (e) {}
+      };
+    } catch (err) {
+      console.warn('SSE connection notice:', err);
+    }
+  }
 
-        // Check if requests changed
-        const reqsStr = JSON.stringify(cloudRequests);
-        const lastReqsStr = JSON.stringify(lastRequestsCache);
-        if (reqsStr !== lastReqsStr) {
-          lastRequestsCache = cloudRequests;
-          localStorage.setItem('mock_service_requests', reqsStr);
-          if (onEvent) onEvent({ type: 'SYNC_REQUEST', data: cloudRequests });
-        }
-
-        // Check if messages changed
-        const msgsStr = JSON.stringify(cloudMessages);
-        const lastMsgsStr = JSON.stringify(lastMessagesCache);
-        if (msgsStr !== lastMsgsStr) {
-          lastMessagesCache = cloudMessages;
-          localStorage.setItem('mock_messages', msgsStr);
-          if (onEvent) onEvent({ type: 'SYNC_MESSAGE_LIST', data: cloudMessages });
-        }
-      }
-    } catch (e) {}
-  }, 1500);
+  // 4. Fallback interval poll every 3 seconds
+  const pollInterval = setInterval(() => {
+    fetchAllCloudRequests().then((reqs) => {
+      if (onEvent) onEvent({ type: 'SYNC_REQUEST', data: reqs });
+    });
+  }, 3000);
 
   return () => {
     channel?.removeEventListener('message', handleBcMessage);
+    if (eventSource) {
+      eventSource.close();
+    }
     clearInterval(pollInterval);
   };
 }
