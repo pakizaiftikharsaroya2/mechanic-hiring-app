@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { fetchMessages, sendMessage as sendMessageApi, subscribeToMessages } from '../services/chatService';
 import { useLanguage } from '../context/LanguageContext';
 
-export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
+export default function LiveChat({ requestId, currentUserId, otherPartyName, role = 'client' }) {
   const { addToast } = useAuth();
   const { t } = useLanguage();
   const [messages, setMessages] = useState([]);
@@ -12,6 +12,8 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
   const [error, setError] = useState(null);
   const [sending, setSending] = useState(false);
   const chatContainerRef = useRef(null);
+
+  const isMechanic = role === 'mechanic';
 
   const loadMessages = useCallback(async () => {
     try {
@@ -75,6 +77,20 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
   const formatTime = (iso) =>
     new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+  const quickMessages = isMechanic
+    ? [
+        t('mech_quick_msg_1'),
+        t('mech_quick_msg_2'),
+        t('mech_quick_msg_3'),
+        t('mech_quick_msg_4')
+      ]
+    : [
+        t('quick_msg_1'),
+        t('quick_msg_2'),
+        t('quick_msg_3'),
+        t('quick_msg_4')
+      ];
+
   return (
     <div className="glass-panel chat-window" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: '380px', background: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
       <div className="chat-header" style={{ background: '#f8f9fa' }}>
@@ -101,18 +117,18 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
         {!loading && !error && messages.length === 0 && (
           <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             <div style={{
-              background: 'rgba(16, 185, 129, 0.08)',
-              border: '1px solid rgba(16, 185, 129, 0.25)',
+              background: isMechanic ? 'rgba(28, 105, 212, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+              border: isMechanic ? '1px solid rgba(28, 105, 212, 0.25)' : '1px solid rgba(16, 185, 129, 0.25)',
               borderRadius: '12px',
               padding: '1rem',
               textAlign: 'center'
             }}>
-              <div style={{ fontSize: '1.35rem', marginBottom: '0.35rem' }}>🛡️</div>
+              <div style={{ fontSize: '1.35rem', marginBottom: '0.35rem' }}>{isMechanic ? '🔧' : '🛡️'}</div>
               <strong style={{ fontSize: '0.88rem', color: 'var(--text-main)', display: 'block', marginBottom: '0.35rem' }}>
                 {t('chat_secure_title')}
               </strong>
               <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
-                {t('chat_secure_sub')}
+                {isMechanic ? t('chat_secure_sub_mechanic') : t('chat_secure_sub')}
               </p>
             </div>
 
@@ -120,12 +136,7 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
               <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
                 {t('quick_messages_label')}
               </span>
-              {[
-                t('quick_msg_1'),
-                t('quick_msg_2'),
-                t('quick_msg_3'),
-                t('quick_msg_4')
-              ].map((quickText, idx) => (
+              {quickMessages.map((quickText, idx) => (
                 <button
                   key={idx}
                   type="button"
@@ -147,7 +158,7 @@ export default function LiveChat({ requestId, currentUserId, otherPartyName }) {
                   }}
                   onMouseOver={(e) => {
                     e.currentTarget.style.borderColor = 'var(--primary)';
-                    e.currentTarget.style.background = 'rgba(16, 185, 129, 0.06)';
+                    e.currentTarget.style.background = isMechanic ? 'rgba(28, 105, 212, 0.06)' : 'rgba(16, 185, 129, 0.06)';
                   }}
                   onMouseOut={(e) => {
                     e.currentTarget.style.borderColor = 'var(--border-color)';

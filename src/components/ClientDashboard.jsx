@@ -674,7 +674,12 @@ export default function ClientDashboard() {
             </div>
 
             <div style={{ flexGrow: 1 }}>
-              <LiveChat requestId={activeRequest.id} currentUserId={user.id} otherPartyName={mechanicProfile?.name} />
+              <LiveChat
+                requestId={activeRequest.id}
+                currentUserId={user.id}
+                otherPartyName={mechanicProfile?.name || 'Mechanic Muhammad'}
+                role="client"
+              />
             </div>
           </div>
         </div>

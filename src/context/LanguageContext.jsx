@@ -426,6 +426,11 @@ const translations = {
     "quick_msg_2": "⏳ What is your estimated time of arrival (ETA)?",
     "quick_msg_3": "🔑 I have my car keys and documents ready.",
     "quick_msg_4": "⛽ I am parked near the main fuel station.",
+    "chat_secure_sub_mechanic": "Direct channel connected with your client. Share your live ETA, confirm vehicle location, or ask for landmarks.",
+    "mech_quick_msg_1": "🚗 I am on my way to your location. ETA ~10-15 mins.",
+    "mech_quick_msg_2": "📍 I have arrived at your breakdown spot. Please turn on hazard lights.",
+    "mech_quick_msg_3": "📞 I am calling your phone to locate your exact vehicle.",
+    "mech_quick_msg_4": "🔧 Tools and diagnostic equipment ready for inspection.",
     
     // Mechanic Dispatch Console
     "incoming_requests": "Incoming Requests",
@@ -859,6 +864,11 @@ const translations = {
     "quick_msg_2": "⏳ آپ کو پہنچنے میں کتنا وقت لگے گا؟",
     "quick_msg_3": "🔑 میرے پاس گاڑی کی چابیاں اور کاغذات تیار ہیں۔",
     "quick_msg_4": "⛽ میں مین پیٹرول پمپ کے قریب کھڑا ہوں۔",
+    "chat_secure_sub_mechanic": "کلائنٹ کے ساتھ براہ راست رابطہ۔ اپنا متوقع وقت بتائیں یا گاڑی کی لوکیشن اور نشانی معلوم کریں۔",
+    "mech_quick_msg_1": "🚗 میں آپ کی لوکیشن کی طرف نکل چکا ہوں۔ متوقع وقت 10 سے 15 منٹ ہے۔",
+    "mech_quick_msg_2": "📍 میں آپ کے پاس پہنچ چکا ہوں۔ برائے مہربانی گاڑی کی لائٹس آن کر لیں۔",
+    "mech_quick_msg_3": "📞 میں درست جگہ معلوم کرنے کے لیے آپ کے نمبر پر کال کر رہا ہوں۔",
+    "mech_quick_msg_4": "🔧 تمام ضروری اوزار اور سامان گاڑی چیک کرنے کے لیے تیار ہیں۔",
 
     // Mechanic Dispatch Console
     "incoming_requests": "موصول شدہ درخواستیں",

@@ -367,7 +367,12 @@ export default function MechanicDashboard() {
             </div>
 
             <div style={{ flexGrow: 1 }}>
-              <LiveChat requestId={activeRequest.id} currentUserId={user.id} otherPartyName={clientProfile?.name} />
+              <LiveChat
+                requestId={activeRequest.id}
+                currentUserId={user.id}
+                otherPartyName={clientProfile?.name || activeRequest.client_name}
+                role="mechanic"
+              />
             </div>
           </div>
         </div>
