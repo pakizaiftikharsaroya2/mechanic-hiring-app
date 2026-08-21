@@ -647,9 +647,14 @@ export default function ClientDashboard() {
                   type="button"
                   onClick={async () => {
                     setActiveRequestId(null);
+                    resetRequestForm();
+                    setDismissedActiveIds(new Set());
+                    try {
+                      sessionStorage.removeItem('client_dismissed_active_reqs');
+                    } catch (e) {}
                     await clearRequestHistory();
                     addToast('History cleared', 'success');
-                    reload();
+                    await reload();
                   }}
                   className="btn btn-outline"
                   style={{ padding: '0.3rem 0.65rem', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '4px' }}
