@@ -105,17 +105,28 @@ export async function fetchRequestById(requestId) {
  * service-role key (see api/requests/[id]/accept.js). This avoids a race
  * where two mechanics both accept the same PENDING request.
  */
-export async function acceptRequest(requestId) {
+export async function acceptRequest(requestId, mechanicInfo = {}) {
   if (isMock) {
     const {
       data: { session },
     } = await supabase.auth.getSession();
 
-    const mechId = session?.user?.id || 'mechanic_muhammad';
+    const mechId = session?.user?.id || mechanicInfo.user_id || 'mechanic_muhammad';
+
+    const payload = {
+      mechanic_id: mechId,
+      status: 'ACCEPTED',
+      mechanic_name: mechanicInfo.name || 'AutoRescue Mechanic',
+      mechanic_phone: mechanicInfo.phone || '0300-1234567',
+      mechanic_latitude: mechanicInfo.latitude || null,
+      mechanic_longitude: mechanicInfo.longitude || null,
+      accepted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
 
     const { data, error } = await supabase
       .from('service_requests')
-      .update({ mechanic_id: mechId, status: 'ACCEPTED' })
+      .update(payload)
       .eq('id', requestId)
       .select()
       .single();
@@ -128,7 +139,7 @@ export async function acceptRequest(requestId) {
       .update({ status: 'BUSY' })
       .eq('user_id', mechId);
 
-    const finalData = data || { id: requestId, mechanic_id: mechId, status: 'ACCEPTED' };
+    const finalData = data || { id: requestId, ...payload };
     await syncCloudRequest(finalData);
     return finalData;
   }

@@ -128,7 +128,13 @@ export default function MechanicDashboard() {
 
   const handleAccept = async (reqId) => {
     try {
-      const updated = await acceptRequest(reqId);
+      const updated = await acceptRequest(reqId, {
+        user_id: user?.id,
+        name: profile?.name || user?.name || user?.email?.split('@')[0] || 'Mechanic Muhammad',
+        phone: profile?.phone || user?.phone || '0300-1234567',
+        latitude: myPosition?.latitude || mechProfile?.latitude || 31.5204,
+        longitude: myPosition?.longitude || mechProfile?.longitude || 74.3587
+      });
       addToast('Job accepted! Live GPS Routing started.', 'success');
       const finalId = updated?.id || reqId;
       setActiveRequestId(finalId);
