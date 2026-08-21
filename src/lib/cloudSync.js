@@ -61,13 +61,19 @@ function isValidRequest(req) {
  * Fetch all shared requests from the native /api/sync endpoint
  */
 export async function fetchAllCloudRequests() {
+  const lastClearedAt = Number(localStorage.getItem('autorescue_last_cleared_at') || 0);
+
   try {
     const res = await fetch(API_URL);
     if (res.ok) {
       const json = await res.json();
       if (Array.isArray(json?.requests)) {
-        const validList = json.requests.filter(isValidRequest);
-        let local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]').filter(isValidRequest);
+        const validList = json.requests
+          .filter(isValidRequest)
+          .filter(r => new Date(r.created_at || 0).getTime() >= lastClearedAt);
+        let local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]')
+          .filter(isValidRequest)
+          .filter(r => new Date(r.created_at || 0).getTime() >= lastClearedAt);
         
         validList.forEach((req) => {
           const idx = local.findIndex((r) => String(r.id) === String(req.id));
@@ -84,7 +90,9 @@ export async function fetchAllCloudRequests() {
     }
   } catch (err) {}
 
-  return JSON.parse(localStorage.getItem('mock_service_requests') || '[]').filter(isValidRequest);
+  return JSON.parse(localStorage.getItem('mock_service_requests') || '[]')
+    .filter(isValidRequest)
+    .filter(r => new Date(r.created_at || 0).getTime() >= lastClearedAt);
 }
 
 /**

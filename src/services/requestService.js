@@ -317,6 +317,8 @@ export function subscribeToAvailableRequests(onInsert) {
 
 /** Wipe all request history completely from local storage, broadcast channels, and server */
 export async function clearRequestHistory() {
+  const now = Date.now();
+  localStorage.setItem('autorescue_last_cleared_at', String(now));
   localStorage.setItem('mock_service_requests', JSON.stringify([]));
   localStorage.setItem('mock_messages', JSON.stringify([]));
   
@@ -325,7 +327,7 @@ export async function clearRequestHistory() {
     await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'CLEAR_ALL', requests: [], messages: [] })
+      body: JSON.stringify({ action: 'CLEAR_ALL', cleared_at: now, requests: [], messages: [] })
     });
   } catch (e) {}
 

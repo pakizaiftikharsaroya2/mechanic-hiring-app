@@ -1,6 +1,7 @@
 // Vercel Serverless Global Sync Engine for AutoRescue Pakistan
 let globalRequests = [];
 let globalMessages = [];
+let lastClearedTimestamp = 0;
 
 export default async function handler(req, res) {
   // Universal CORS Headers
@@ -17,8 +18,12 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'GET') {
+    const validRequests = globalRequests.filter(r => {
+      const created = new Date(r.created_at || 0).getTime();
+      return created >= lastClearedTimestamp;
+    });
     return res.status(200).json({
-      requests: globalRequests,
+      requests: validRequests,
       messages: globalMessages
     });
   }
@@ -27,6 +32,7 @@ export default async function handler(req, res) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
 
     if (body.action === 'CLEAR_ALL' || body.action === 'CLEAR_HISTORY') {
+      lastClearedTimestamp = Number(body.cleared_at || Date.now());
       globalRequests = [];
       globalMessages = [];
       return res.status(200).json({ requests: [], messages: [] });
@@ -34,41 +40,47 @@ export default async function handler(req, res) {
 
     if (body.type === 'SYNC_REQUEST' && body.data) {
       const item = body.data;
-      const idx = globalRequests.findIndex(r => String(r.id) === String(item.id));
-      if (idx >= 0) {
-        const existing = globalRequests[idx];
-        const existStat = String(existing?.status || 'PENDING').toUpperCase();
-        const incStat = String(item?.status || 'PENDING').toUpperCase();
+      const created = new Date(item.created_at || 0).getTime();
+      if (created >= lastClearedTimestamp) {
+        const idx = globalRequests.findIndex(r => String(r.id) === String(item.id));
+        if (idx >= 0) {
+          const existing = globalRequests[idx];
+          const existStat = String(existing?.status || 'PENDING').toUpperCase();
+          const incStat = String(item?.status || 'PENDING').toUpperCase();
 
-        // Terminal state lock: Never let a cancelled/completed job be revived by a stale packet
-        if (existStat === 'CANCELLED' && incStat !== 'CANCELLED') {
-          // preserve CANCELLED
-        } else if (existStat === 'COMPLETED' && incStat !== 'COMPLETED' && incStat !== 'CANCELLED') {
-          // preserve COMPLETED
+          // Terminal state lock: Never let a cancelled/completed job be revived by a stale packet
+          if (existStat === 'CANCELLED' && incStat !== 'CANCELLED') {
+            // preserve CANCELLED
+          } else if (existStat === 'COMPLETED' && incStat !== 'COMPLETED' && incStat !== 'CANCELLED') {
+            // preserve COMPLETED
+          } else {
+            globalRequests[idx] = { ...existing, ...item };
+          }
         } else {
-          globalRequests[idx] = { ...existing, ...item };
+          globalRequests.unshift(item);
         }
-      } else {
-        globalRequests.unshift(item);
       }
     }
 
     if (Array.isArray(body.requests) && body.requests.length > 0) {
       body.requests.forEach(reqItem => {
-        const idx = globalRequests.findIndex(r => String(r.id) === String(reqItem.id));
-        if (idx >= 0) {
-          const existing = globalRequests[idx];
-          const existStat = String(existing?.status || 'PENDING').toUpperCase();
-          const incStat = String(reqItem?.status || 'PENDING').toUpperCase();
-          if (existStat === 'CANCELLED' && incStat !== 'CANCELLED') {
-            // preserve
-          } else if (existStat === 'COMPLETED' && incStat !== 'COMPLETED' && incStat !== 'CANCELLED') {
-            // preserve
+        const created = new Date(reqItem.created_at || 0).getTime();
+        if (created >= lastClearedTimestamp) {
+          const idx = globalRequests.findIndex(r => String(r.id) === String(reqItem.id));
+          if (idx >= 0) {
+            const existing = globalRequests[idx];
+            const existStat = String(existing?.status || 'PENDING').toUpperCase();
+            const incStat = String(reqItem?.status || 'PENDING').toUpperCase();
+            if (existStat === 'CANCELLED' && incStat !== 'CANCELLED') {
+              // preserve
+            } else if (existStat === 'COMPLETED' && incStat !== 'COMPLETED' && incStat !== 'CANCELLED') {
+              // preserve
+            } else {
+              globalRequests[idx] = { ...existing, ...reqItem };
+            }
           } else {
-            globalRequests[idx] = { ...existing, ...reqItem };
+            globalRequests.push(reqItem);
           }
-        } else {
-          globalRequests.push(reqItem);
         }
       });
     }
@@ -80,8 +92,13 @@ export default async function handler(req, res) {
       }
     }
 
+    const validRequests = globalRequests.filter(r => {
+      const created = new Date(r.created_at || 0).getTime();
+      return created >= lastClearedTimestamp;
+    });
+
     return res.status(200).json({
-      requests: globalRequests,
+      requests: validRequests,
       messages: globalMessages
     });
   }
