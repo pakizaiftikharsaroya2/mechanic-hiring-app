@@ -8,6 +8,7 @@ import { fetchProfile } from '../services/authService';
 import { fetchMechanicProfile, haversineDistanceKm } from '../services/mechanicService';
 import RealMap from './RealMap';
 import LiveChat from './LiveChat';
+import { useLanguage } from '../context/LanguageContext';
 import { BRAND_DEALERSHIP_POLICIES } from '../data/dealershipData';
 import { getEstimatedPriceRange } from '../data/pricingEstimator';
 import { submitRequestReview, getMechanicRatingSummary } from '../services/reviewService';
