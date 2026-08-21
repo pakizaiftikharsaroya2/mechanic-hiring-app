@@ -176,7 +176,10 @@ export async function updateRequestStatus(requestId, newStatus) {
         .eq('user_id', session?.user?.id || 'mechanic_muhammad');
     }
 
-    const finalData = data || { id: requestId, status: newStatus };
+    // Read full merged request row from local storage to preserve all attributes
+    const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+    const fullRow = local.find(r => String(r.id) === String(requestId)) || data || { id: requestId, status: newStatus };
+    const finalData = { ...fullRow, status: newStatus, updated_at: new Date().toISOString() };
     await syncCloudRequest(finalData);
     return finalData;
   }

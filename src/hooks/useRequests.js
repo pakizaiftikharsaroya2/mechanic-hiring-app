@@ -37,7 +37,13 @@ export function useClientRequests(clientId) {
 
     // Cross-profile & cross-device cloud sync
     const unsubCloud = subscribeCloudEvents((event) => {
-      if (event.type === 'SYNC_REQUEST') reload();
+      if (event.type === 'SYNC_REQUEST') {
+        if (Array.isArray(event.data)) {
+          const filtered = clientId ? event.data.filter(r => String(r.client_id) === String(clientId) || !r.client_id) : event.data;
+          setRequests(filtered);
+        }
+        reload();
+      }
     });
 
     return () => {
@@ -101,7 +107,12 @@ export function useAvailableRequests() {
 
     // Cross-profile & cross-device cloud sync
     const unsubCloud = subscribeCloudEvents((event) => {
-      if (event.type === 'SYNC_REQUEST') reload();
+      if (event.type === 'SYNC_REQUEST') {
+        if (Array.isArray(event.data)) {
+          setRequests(event.data.filter(r => String(r.status || 'PENDING').toUpperCase() === 'PENDING' && !r.mechanic_id));
+        }
+        reload();
+      }
     });
 
     return () => {
@@ -166,7 +177,13 @@ export function useMechanicRequests(mechanicId) {
 
     // Cross-profile & cross-device cloud sync
     const unsubCloud = subscribeCloudEvents((event) => {
-      if (event.type === 'SYNC_REQUEST') reload();
+      if (event.type === 'SYNC_REQUEST') {
+        if (Array.isArray(event.data)) {
+          const filtered = mechanicId ? event.data.filter(r => String(r.mechanic_id) === String(mechanicId)) : [];
+          setRequests(filtered);
+        }
+        reload();
+      }
     });
 
     return () => {

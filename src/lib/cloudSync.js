@@ -55,7 +55,7 @@ export async function syncCloudRequest(req) {
   let updatedList = [];
   try {
     const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
-    const idx = local.findIndex((r) => r.id === req.id);
+    const idx = local.findIndex((r) => String(r.id) === String(req.id));
     if (idx >= 0) {
       local[idx] = { ...local[idx], ...req };
     } else {
@@ -81,7 +81,7 @@ export async function syncCloudRequest(req) {
       cloudMessages = json?.data?.messages || [];
     }
 
-    const idx = cloudList.findIndex((r) => r.id === req.id);
+    const idx = cloudList.findIndex((r) => String(r.id) === String(req.id));
     if (idx >= 0) {
       cloudList[idx] = { ...cloudList[idx], ...req };
     } else {
