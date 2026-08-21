@@ -42,7 +42,8 @@ export async function fetchClientRequests(clientId) {
   if (isMock) {
     const all = await fetchAllCloudRequests();
     if (!clientId) return all || [];
-    return (all || []).filter((r) => String(r.client_id) === String(clientId));
+    const list = (all || []).filter((r) => !r.client_id || String(r.client_id) === String(clientId));
+    return list.length > 0 ? list : (all || []);
   }
   const { data, error } = await supabase
     .from('service_requests')
@@ -50,7 +51,7 @@ export async function fetchClientRequests(clientId) {
     .order('created_at', { ascending: false });
   if (error) throw error;
   if (!clientId) return data || [];
-  return (data || []).filter(r => r.client_id === clientId || !r.client_id);
+  return (data || []).filter(r => !r.client_id || String(r.client_id) === String(clientId));
 }
 
 /** Requests still open for any online mechanic to see (RLS filters to PENDING only). */

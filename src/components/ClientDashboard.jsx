@@ -229,9 +229,15 @@ export default function ClientDashboard() {
         clientName: profile?.name || user?.name || user?.email?.split('@')[0] || 'Client User',
         clientPhone: profile?.phone || user?.phone || '0300-1234567',
       });
+      setVehicleModel('');
+      setDescription('');
+      setIsAccident(false);
+      setCustomVehicleMake('');
+      setCustomBreakdown('');
+      setDestinationNote('');
       addToast('Request broadcast successfully! Waiting for a mechanic...', 'success');
       setActiveRequestId(created.id);
-      reload();
+      await reload();
     } catch (err) {
       addToast(err.message || 'Failed to create request', 'error');
     } finally {

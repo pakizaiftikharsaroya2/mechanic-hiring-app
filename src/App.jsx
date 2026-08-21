@@ -10,17 +10,7 @@ import MechanicDashboard from './components/MechanicDashboard';
 import Profile from './pages/Profile';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
-// Auto-purge stale test requests from old testing sessions
-try {
-  if (typeof window !== 'undefined') {
-    const hasPurgedV2 = localStorage.getItem('autorescue_purged_v2');
-    if (!hasPurgedV2) {
-      localStorage.setItem('mock_service_requests', JSON.stringify([]));
-      localStorage.setItem('mock_messages', JSON.stringify([]));
-      localStorage.setItem('autorescue_purged_v2', 'true');
-    }
-  }
-} catch (e) {}
+// App Header and Navigation Bar
 
 function Header() {
   const { isAuthenticated, role, theme, toggleTheme, logout, user, profile } = useAuth();
