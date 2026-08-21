@@ -24,7 +24,13 @@ export default function MechanicDashboard() {
   const [showVeriffModal, setShowVeriffModal] = useState(false);
   const [veriffStep, setVeriffStep] = useState(0);
   const [activeJob, setActiveJob] = useState(null);
-  const [declinedIds, setDeclinedIds] = useState(new Set());
+  const [declinedIds, setDeclinedIds] = useState(() => {
+    try {
+      return new Set(JSON.parse(sessionStorage.getItem('mech_declined_req_ids') || '[]'));
+    } catch (e) {
+      return new Set();
+    }
+  });
   const [biddingCardId, setBiddingCardId] = useState(null);
   const [customBidAmounts, setCustomBidAmounts] = useState({});
   const stopWatchRef = useRef(null);
@@ -52,8 +58,9 @@ export default function MechanicDashboard() {
         }
       }
     });
-    return unsubCloud;
-  }, [activeJob?.id, activeRequestId, addToast, t, reloadMine, reloadAvailable]);
+
+    return () => unsubCloud();
+  }, [activeJob?.id, activeRequestId, reloadMine, reloadAvailable, t]);
 
   useEffect(() => {
     if (!user) return;
@@ -95,28 +102,15 @@ export default function MechanicDashboard() {
   }, [activeRequest?.id, user?.id]);
 
   const toggleOnline = async () => {
-    const currentStatus = mechProfile?.status === 'ONLINE' ? 'ONLINE' : 'OFFLINE';
-    const nextStatus = currentStatus === 'ONLINE' ? 'OFFLINE' : 'ONLINE';
-    // Instant optimistic update
-    setMechProfile((prev) => (prev ? { ...prev, status: nextStatus } : { status: nextStatus }));
-    addToast(`You are now ${nextStatus}`, 'success');
-
+    const newStatus = isOffline ? 'ONLINE' : 'OFFLINE';
+    setMechProfile((prev) => (prev ? { ...prev, status: newStatus } : prev));
+    addToast(newStatus === 'ONLINE' ? 'You are now Online & receiving broadcast jobs' : 'You went Offline', 'info');
     try {
-      if (nextStatus === 'ONLINE') {
-        try {
-          const pos = await getBrowserLocation();
-          updateMechanicLocation(user?.id, pos).catch(() => {});
-        } catch {
-          /* location optional */
-        }
-      }
-      if (user?.id) {
-        await setMechanicStatus(user.id, nextStatus);
-      }
+      await setMechanicStatus(user.id, newStatus);
+      reloadMine();
       reloadAvailable();
     } catch (err) {
-      setMechProfile((prev) => (prev ? { ...prev, status: currentStatus } : { status: currentStatus }));
-      addToast(err.message || 'Failed to update status', 'error');
+      addToast(err.message || 'Failed to toggle status', 'error');
     }
   };
 
@@ -164,6 +158,16 @@ export default function MechanicDashboard() {
       const reqId = activeRequest?.id || activeRequestId;
       if (!reqId) return;
 
+      // Add to declined set so it does not bounce back on this mechanic's screen
+      setDeclinedIds((prev) => {
+        const next = new Set(prev);
+        next.add(reqId);
+        try {
+          sessionStorage.setItem('mech_declined_req_ids', JSON.stringify([...next]));
+        } catch (e) {}
+        return next;
+      });
+
       // Instant optimistic local state update
       setActiveJob(null);
       setActiveRequestId(null);
@@ -192,8 +196,15 @@ export default function MechanicDashboard() {
   };
 
   const handleDeclineAvailable = (reqId) => {
-    setDeclinedIds((prev) => new Set([...prev, reqId]));
-    addToast('Request dismissed from your board', 'info');
+    setDeclinedIds((prev) => {
+      const next = new Set(prev);
+      next.add(reqId);
+      try {
+        sessionStorage.setItem('mech_declined_req_ids', JSON.stringify([...next]));
+      } catch (e) {}
+      return next;
+    });
+    addToast('Request declined and removed from your broadcast board', 'info');
   };
 
   const handleSendOffer = async (req, amount) => {
