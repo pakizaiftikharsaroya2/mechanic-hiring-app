@@ -48,6 +48,41 @@ export default function Login() {
     initGoogleOneTap((userPayload) => {
       handleConfirmGoogleLogin(userPayload);
     });
+
+    const timer = setInterval(() => {
+      if (window.google?.accounts?.id) {
+        const btnDiv = document.getElementById('officialGoogleLoginBtn');
+        if (btnDiv && !btnDiv.hasChildNodes()) {
+          try {
+            const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '104829283726-autorescue.apps.googleusercontent.com';
+            window.google.accounts.id.initialize({
+              client_id: clientId,
+              callback: (response) => {
+                if (response?.credential) {
+                  const payload = decodeJwtResponse(response.credential);
+                  if (payload) {
+                    handleConfirmGoogleLogin({
+                      name: payload.name || payload.given_name,
+                      email: payload.email,
+                      avatar: payload.picture
+                    });
+                  }
+                }
+              }
+            });
+            window.google.accounts.id.renderButton(btnDiv, {
+              theme: 'outline',
+              size: 'large',
+              width: 320,
+              text: 'continue_with',
+              shape: 'pill'
+            });
+          } catch (e) {}
+        }
+      }
+    }, 500);
+
+    return () => clearInterval(timer);
   }, []);
 
   // Handle Mechanic Email Login Submit
@@ -66,8 +101,44 @@ export default function Login() {
     }
   };
 
-  // Handle Google Login Click (Client)
+  // Handle Google Login Click (Client) -> Triggers real Google accounts.google.com popup
   const handleGoogleLogin = () => {
+    if (window.google?.accounts?.oauth2) {
+      try {
+        const client = window.google.accounts.oauth2.initTokenClient({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '104829283726-autorescue.apps.googleusercontent.com',
+          scope: 'email profile openid',
+          callback: async (tokenResponse) => {
+            if (tokenResponse?.access_token) {
+              try {
+                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+                });
+                const googleUser = await res.json();
+                if (googleUser?.email) {
+                  await handleConfirmGoogleLogin({
+                    name: googleUser.name || googleUser.given_name,
+                    email: googleUser.email,
+                    avatar: googleUser.picture
+                  });
+                  return;
+                }
+              } catch (e) {}
+            }
+          }
+        });
+        client.requestAccessToken();
+        return;
+      } catch (e) {}
+    }
+
+    if (window.google?.accounts?.id) {
+      try {
+        window.google.accounts.id.prompt();
+        return;
+      } catch (e) {}
+    }
+
     setShowGooglePicker(true);
   };
 
@@ -425,7 +496,10 @@ export default function Login() {
               <hr style={{ flex: 1, border: 'none', borderTop: '1px solid var(--border-color)' }} />
             </div>
 
-            {/* Google OAuth Button */}
+            {/* Official Google Identity Button & Instant OAuth Trigger */}
+            <div id="officialGoogleLoginBtn" style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem', minHeight: '40px' }}></div>
+
+            {/* Google OAuth Fallback Button */}
             <button 
               type="button" 
               onClick={handleGoogleLogin} 
