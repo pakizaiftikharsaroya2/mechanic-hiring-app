@@ -13,7 +13,7 @@ import { LanguageProvider, useLanguage } from './context/LanguageContext';
 // Clean up any test ghosts from old sessions
 try {
   const stored = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
-  const validOnly = stored.filter((r) => r && r.id && r.id !== 'req_demo1' && r.location_text && r.location_text !== 'Lahore');
+  const validOnly = stored.filter((r) => r && r.id && r.id !== 'req_demo1');
   if (validOnly.length !== stored.length) {
     localStorage.setItem('mock_service_requests', JSON.stringify(validOnly));
   }

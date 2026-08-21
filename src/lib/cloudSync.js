@@ -4,14 +4,12 @@ const channel = typeof window !== 'undefined' && window.BroadcastChannel
   : null;
 
 function isValidRequest(req) {
-  return (
+  return Boolean(
     req &&
     req.id &&
     req.id !== 'req_demo1' &&
     req.status &&
-    req.vehicle_make &&
-    req.location_text &&
-    req.location_text !== 'Lahore'
+    req.vehicle_make
   );
 }
 
