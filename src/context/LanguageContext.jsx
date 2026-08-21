@@ -437,6 +437,12 @@ const translations = {
     "clear_history": "Clear History",
     "chat_locked_title": "Live Chat Locked",
     "chat_locked_sub": "Direct messaging unlocks automatically once a nearby mechanic accepts your roadside request.",
+    "mech_cancel_job": "Decline / Release Job",
+    "mech_cancel_confirm": "Are you sure you want to release this job back to the broadcast board for other mechanics?",
+    "cannot_cancel_enroute_half": "Cancellation is locked because the mechanic has already covered more than half the distance to your location.",
+    "client_cancelled_notice": "⚠️ The client has cancelled this request.",
+    "job_released_success": "Job released back to available board. You are now ONLINE.",
+    "decline_request": "Decline",
     
     // Mechanic Dispatch Console
     "incoming_requests": "Incoming Requests",
@@ -881,6 +887,12 @@ const translations = {
     "clear_history": "ہسٹری صاف کریں",
     "chat_locked_title": "لائیو چیٹ مقفل ہے",
     "chat_locked_sub": "قریبی مکینک کی جانب سے درخواست قبول کرنے پر براہ راست رابطہ خود بخود کھل جائے گا۔",
+    "mech_cancel_job": "کام چھوڑیں / منسوخ کریں",
+    "mech_cancel_confirm": "کیا آپ واقعی یہ کام دوسرے مکینکس کے لیے واپس چھوڑنا چاہتے ہیں؟",
+    "cannot_cancel_enroute_half": "منسوخی مقفل ہے کیونکہ مکینک آدھے سے زیادہ فاصلہ طے کر چکا ہے۔",
+    "client_cancelled_notice": "⚠️ کسٹمر نے یہ درخواست منسوخ کر دی ہے۔",
+    "job_released_success": "کام واپس بورڈ پر بھیج دیا گیا ہے۔ آپ اب آن لائن ہیں۔",
+    "decline_request": "مسترد کریں",
 
     // Mechanic Dispatch Console
     "incoming_requests": "موصول شدہ درخواستیں",

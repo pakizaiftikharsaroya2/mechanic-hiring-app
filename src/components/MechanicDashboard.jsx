@@ -5,6 +5,7 @@ import { acceptRequest, updateRequestStatus, clearRequestHistory } from '../serv
 import { fetchMechanicProfile, setMechanicStatus, haversineDistanceKm, verifyMechanicProfile } from '../services/mechanicService';
 import { getBrowserLocation, watchBrowserLocation, updateMechanicLocation } from '../services/locationService';
 import { fetchProfile } from '../services/authService';
+import { syncCloudRequest, subscribeCloudEvents } from '../lib/cloudSync';
 import RealMap from './RealMap';
 import LiveChat from './LiveChat';
 import { useLanguage } from '../context/LanguageContext';
@@ -23,12 +24,35 @@ export default function MechanicDashboard() {
   const [showVeriffModal, setShowVeriffModal] = useState(false);
   const [veriffStep, setVeriffStep] = useState(0);
   const [activeJob, setActiveJob] = useState(null);
+  const [declinedIds, setDeclinedIds] = useState(new Set());
   const stopWatchRef = useRef(null);
 
   const activeRequest = (activeJob && !['CANCELLED'].includes(activeJob.status?.toUpperCase()) ? activeJob : null)
     || (activeRequestId && myRequests.find((r) => r.id === activeRequestId && !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase())))
     || myRequests.find((r) => !['COMPLETED', 'CANCELLED'].includes(r.status?.toUpperCase()))
     || (activeRequestId && available.find((r) => r.id === activeRequestId));
+
+  // Live listener to instantly detect when the client cancels the active job
+  useEffect(() => {
+    const unsubCloud = subscribeCloudEvents((event) => {
+      if (event.type === 'SYNC_REQUEST') {
+        const allReqs = Array.isArray(event.data) ? event.data : [event.data];
+        const currentActiveId = activeJob?.id || activeRequestId;
+        if (currentActiveId) {
+          const match = allReqs.find((r) => String(r?.id) === String(currentActiveId));
+          if (match && match.status?.toUpperCase() === 'CANCELLED') {
+            addToast(t('client_cancelled_notice'), 'info');
+            setActiveJob(null);
+            setActiveRequestId(null);
+            setMechProfile((prev) => (prev ? { ...prev, status: 'ONLINE' } : prev));
+            reloadMine();
+            reloadAvailable();
+          }
+        }
+      }
+    });
+    return unsubCloud;
+  }, [activeJob?.id, activeRequestId, addToast, t, reloadMine, reloadAvailable]);
 
   useEffect(() => {
     if (!user) return;
@@ -93,10 +117,9 @@ export default function MechanicDashboard() {
   const handleVeriffComplete = async () => {
     try {
       await verifyMechanicProfile(user.id);
-      addToast('Identity verified via Veriff API successfully!', 'success');
+      setMechProfile((prev) => ({ ...prev, is_verified: true }));
       setShowVeriffModal(false);
-      const updated = await fetchMechanicProfile(user.id);
-      setMechProfile(updated);
+      addToast('Identity successfully verified via Veriff!', 'success');
     } catch (err) {
       addToast('Failed to complete identity verification', 'error');
     }
@@ -117,6 +140,38 @@ export default function MechanicDashboard() {
     }
   };
 
+  const handleMechanicReleaseJob = async () => {
+    if (!window.confirm(t('mech_cancel_confirm'))) return;
+    try {
+      const reqId = activeRequest?.id || activeRequestId;
+      const local = JSON.parse(localStorage.getItem('mock_service_requests') || '[]');
+      const fullRow = local.find((r) => String(r.id) === String(reqId));
+      const released = { ...(fullRow || {}), id: reqId, status: 'PENDING', mechanic_id: null, updated_at: new Date().toISOString() };
+
+      const idx = local.findIndex((r) => String(r.id) === String(reqId));
+      if (idx >= 0) {
+        local[idx] = released;
+        localStorage.setItem('mock_service_requests', JSON.stringify(local));
+      }
+      await syncCloudRequest(released);
+
+      await setMechanicStatus(user.id, 'ONLINE');
+      setMechProfile((prev) => (prev ? { ...prev, status: 'ONLINE' } : prev));
+      setActiveJob(null);
+      setActiveRequestId(null);
+      addToast(t('job_released_success'), 'success');
+      await reloadMine();
+      await reloadAvailable();
+    } catch (err) {
+      addToast(err.message || 'Failed to release job', 'error');
+    }
+  };
+
+  const handleDeclineAvailable = (reqId) => {
+    setDeclinedIds((prev) => new Set([...prev, reqId]));
+    addToast('Request dismissed from your board', 'info');
+  };
+
   const handleStatusChange = async (newStatus) => {
     try {
       const reqId = activeRequest?.id || activeRequestId;
@@ -135,16 +190,18 @@ export default function MechanicDashboard() {
 
   const formatPKR = (amount) => `Rs. ${Number(amount).toLocaleString('en-PK')}`;
 
-  const withDistance = available.map((r) => {
-    let dist = null;
-    if (mechProfile?.latitude && mechProfile?.longitude && r.latitude && r.longitude) {
-      dist = haversineDistanceKm(mechProfile.latitude, mechProfile.longitude, r.latitude, r.longitude);
-    }
-    return {
-      ...r,
-      _distanceKm: dist,
-    };
-  }).sort((a, b) => {
+  const withDistance = available
+    .filter((r) => !declinedIds.has(r.id))
+    .map((r) => {
+      let dist = null;
+      if (mechProfile?.latitude && mechProfile?.longitude && r.latitude && r.longitude) {
+        dist = haversineDistanceKm(mechProfile.latitude, mechProfile.longitude, r.latitude, r.longitude);
+      }
+      return {
+        ...r,
+        _distanceKm: dist,
+      };
+    }).sort((a, b) => {
     if (a._distanceKm != null && b._distanceKm != null) return a._distanceKm - b._distanceKm;
     if (a._distanceKm != null) return -1;
     if (b._distanceKm != null) return 1;
@@ -248,10 +305,24 @@ export default function MechanicDashboard() {
                       <div><strong>{t('Payment:')}</strong> {t(req.payment_method)}</div>
                     </div>
                   </div>
-
-                  <button onClick={() => handleAccept(req.id)} className="btn btn-primary" style={{ width: '100%', borderRadius: 'var(--radius-sm)' }}>
-                    {t('accept_job')}
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleDeclineAvailable(req.id)}
+                      className="btn btn-outline"
+                      style={{ flex: '1', padding: '0.6rem', fontSize: '0.8rem', borderRadius: 'var(--radius-sm)' }}
+                    >
+                      {t('decline_request')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAccept(req.id)}
+                      className="btn btn-primary"
+                      style={{ flex: '2', padding: '0.6rem', fontSize: '0.85rem', fontWeight: 700, borderRadius: 'var(--radius-sm)' }}
+                    >
+                      {t('accept_job')}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -305,7 +376,7 @@ export default function MechanicDashboard() {
               <h3 style={{ fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('navigation_routing')}</h3>
               {activeRequest.status === 'EN_ROUTE' && (
                 <span style={{ fontSize: '0.75rem', color: 'var(--secondary)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span className="pulse-indicator"></span> {t('heading_to_client')}
+                  <span className="pulse-indicator"></span> {t('en_route_to_breakdown')}
                 </span>
               )}
             </div>
@@ -328,9 +399,18 @@ export default function MechanicDashboard() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {activeRequest.status === 'ACCEPTED' && (
-                  <button onClick={() => handleStatusChange('EN_ROUTE')} className="btn btn-secondary" style={{ width: '100%', padding: '0.75rem' }}>
-                    {t('start_driving')}
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <button onClick={() => handleStatusChange('EN_ROUTE')} className="btn btn-secondary" style={{ width: '100%', padding: '0.75rem', fontWeight: 700 }}>
+                      🚗 {t('start_driving')}
+                    </button>
+                    <button
+                      onClick={handleMechanicReleaseJob}
+                      className="btn"
+                      style={{ background: 'rgba(239,68,68,0.08)', color: 'var(--error)', border: '1px solid var(--error)', width: '100%', padding: '0.5rem', fontSize: '0.8rem' }}
+                    >
+                      ❌ {t('mech_cancel_job')}
+                    </button>
+                  </div>
                 )}
                 {activeRequest.status === 'EN_ROUTE' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'center' }}>
@@ -354,11 +434,6 @@ export default function MechanicDashboard() {
                 {activeRequest.status === 'COMPLETED' && (
                   <button onClick={() => setActiveRequestId(null)} className="btn btn-outline" style={{ width: '100%', padding: '0.75rem' }}>
                     {t('back_to_job_board')}
-                  </button>
-                )}
-                {['ACCEPTED', 'EN_ROUTE'].includes(activeRequest.status) && (
-                  <button onClick={() => handleStatusChange('CANCELLED')} className="btn" style={{ background: 'rgba(239,68,68,0.08)', color: 'var(--error)', border: '1px solid var(--error)', width: '100%', padding: '0.5rem' }}>
-                    {t('cancel_job')}
                   </button>
                 )}
               </div>

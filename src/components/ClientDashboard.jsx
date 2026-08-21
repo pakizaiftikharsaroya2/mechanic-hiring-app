@@ -5,7 +5,7 @@ import { createRequest, cancelRequest, clearRequestHistory } from '../services/r
 import { getBrowserLocation, subscribeToMechanicLocation } from '../services/locationService';
 import { reverseGeocode } from '../services/routingService';
 import { fetchProfile } from '../services/authService';
-import { fetchMechanicProfile } from '../services/mechanicService';
+import { fetchMechanicProfile, haversineDistanceKm } from '../services/mechanicService';
 import RealMap from './RealMap';
 import LiveChat from './LiveChat';
 import { useLanguage } from '../context/LanguageContext';
@@ -767,9 +767,39 @@ export default function ClientDashboard() {
                 )}
 
                 {['PENDING', 'ACCEPTED', 'EN_ROUTE'].includes(statusUpper) && (
-                  <button onClick={() => setShowCancelModal(true)} className="btn" style={{ background: 'rgba(239, 68, 68, 0.08)', color: 'var(--error)', border: '1px solid var(--error)', width: '100%', padding: '0.5rem', cursor: 'pointer' }}>
-                    {t('cancel_request')}
-                  </button>
+                  (() => {
+                    const currentDist = (mechanicPosition?.latitude && mechanicPosition?.longitude && activeRequest?.latitude && activeRequest?.longitude)
+                      ? haversineDistanceKm(mechanicPosition.latitude, mechanicPosition.longitude, activeRequest.latitude, activeRequest.longitude)
+                      : null;
+                    const isTooCloseToCancel = statusUpper === 'EN_ROUTE' && currentDist != null && currentDist < 2.5;
+
+                    if (isTooCloseToCancel) {
+                      return (
+                        <div style={{
+                          background: 'rgba(245, 158, 11, 0.08)',
+                          border: '1px dashed #f59e0b',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '0.5rem',
+                          textAlign: 'center',
+                          fontSize: '0.72rem',
+                          color: '#b45309',
+                          fontWeight: 600
+                        }}>
+                          🔒 {t('cannot_cancel_enroute_half')}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <button
+                        onClick={() => setShowCancelModal(true)}
+                        className="btn"
+                        style={{ background: 'rgba(239, 68, 68, 0.08)', color: 'var(--error)', border: '1px solid var(--error)', width: '100%', padding: '0.5rem', cursor: 'pointer' }}
+                      >
+                        {t('cancel_request')}
+                      </button>
+                    );
+                  })()
                 )}
                 {statusUpper === 'COMPLETED' && (
                   <button onClick={() => setActiveRequestId(null)} className="btn btn-primary" style={{ width: '100%', padding: '0.5rem' }}>
